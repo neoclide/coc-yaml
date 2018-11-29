@@ -1,0 +1,108 @@
+{
+  "name": "coc-yaml",
+  "version": "1.0.0",
+  "description": "yaml extension for coc.nvim",
+  "main": "lib/index.js",
+  "publisher": "chemzqm",
+  "keywords": [
+    "coc.nvim",
+    "yaml"
+  ],
+  "engines": {
+    "coc": "^0.0.32"
+  },
+  "scripts": {
+    "clean": "rimraf lib",
+    "build": "tsc -p tsconfig.json",
+    "prepare": "yarn clean && yarn build"
+  },
+  "activationEvents": [
+    "onLanguage:yaml"
+  ],
+  "yamlValidation": [],
+  "contributes": {
+    "configuration": {
+      "type": "object",
+      "properties": {
+        "yaml.trace.server": {
+          "type": "string",
+          "enum": [
+            "off",
+            "messages",
+            "verbose"
+          ],
+          "default": "off",
+          "description": "Traces the communication between VSCode and the languageServerExample service."
+        },
+        "yaml.schemas": {
+          "type": "object",
+          "default": {},
+          "description": "Associate schemas to Yaml files in the current workspace"
+        },
+        "yaml.format.enable": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable/disable default YAML formatter (requires restart)"
+        },
+        "yaml.format.singleQuote": {
+          "type": "boolean",
+          "default": false,
+          "description": "Use single quotes instead of double quotes"
+        },
+        "yaml.format.bracketSpacing": {
+          "type": "boolean",
+          "default": true,
+          "description": "Print spaces between brackets in objects"
+        },
+        "yaml.format.proseWrap": {
+          "type": "string",
+          "default": "preserve",
+          "enum": [
+            "preserve",
+            "never",
+            "always"
+          ],
+          "description": "Always: wrap prose if it exeeds the print width, Never: never wrap the prose, Preserve: wrap prose as-is"
+        },
+        "yaml.validate": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable/disable validation feature"
+        },
+        "yaml.hover": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable/disable hover feature"
+        },
+        "yaml.completion": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable/disable completion feature"
+        },
+        "yaml.customTags": {
+          "type": "array",
+          "default": [],
+          "description": "Custom tags for the parser to use"
+        }
+      }
+    }
+  },
+  "author": "chemzqm@gmail.com",
+  "license": "MIT",
+  "devDependencies": {
+    "@chemzqm/tsconfig": "^0.0.3",
+    "@chemzqm/tslint-config": "^1.0.17",
+    "@types/node": "^10.12.9",
+    "coc.nvim": "^0.0.32",
+    "rimraf": "^2.6.2",
+    "tslint": "^5.11.0",
+    "typescript": "^3.1.6"
+  },
+  "dependencies": {
+    "tslib": "^1.9.3",
+    "vscode-languageserver": "^5.1.0",
+    "vscode-languageserver-protocol": "^3.13.0",
+    "vscode-uri": "^1.0.6",
+    "yaml-language-server": "^0.1.0"
+  }
+}
