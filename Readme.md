@@ -78,7 +78,7 @@ e.g.
 
 ```
 yaml.schemas: {
-    "kubernetes": "/myYamlFile.yaml"
+    "kubernetes": "/*.yaml"
 }
 ```
 
