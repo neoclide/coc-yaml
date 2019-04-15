@@ -19,7 +19,7 @@ namespace DynamicCustomSchemaRequestRegistration {
 
 export async function activate(context: ExtensionContext): Promise<void> {
   let { subscriptions } = context
-  const config = workspace.getConfiguration('NAME')
+  const config = workspace.getConfiguration('yaml')
   let file = context.asAbsolutePath(path.join('node_modules', 'yaml-language-server', 'out', 'server', 'src', 'server.js'))
   if (!fs.existsSync(file)) {
     file = context.asAbsolutePath(path.join('..', 'yaml-language-server', 'out', 'server', 'src', 'server.js'))
@@ -61,10 +61,10 @@ export async function activate(context: ExtensionContext): Promise<void> {
   client.onReady().then(() => {
     client.sendNotification(SchemaAssociationNotification.type, getSchemaAssociation(context))
     client.sendNotification(DynamicCustomSchemaRequestRegistration.type)
-    client.onRequest(CUSTOM_SCHEMA_REQUEST, (resource) => {
+    client.onRequest(CUSTOM_SCHEMA_REQUEST,resource => {
       return schemaContributor.requestCustomSchema(resource)
     })
-    client.onRequest(CUSTOM_CONTENT_REQUEST, (uri) => {
+    client.onRequest(CUSTOM_CONTENT_REQUEST,uri => {
       return schemaContributor.requestCustomSchemaContent(uri)
     })
   }, e => {

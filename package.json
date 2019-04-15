@@ -24,6 +24,11 @@
     "configuration": {
       "type": "object",
       "properties": {
+        "yaml.execArgv": {
+          "type": "array",
+          "default": [],
+          "description": "The execArgv option for node running yaml language server."
+        },
         "yaml.trace.server": {
           "type": "string",
           "enum": [
