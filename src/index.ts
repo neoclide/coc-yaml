@@ -25,7 +25,7 @@ export async function activate(context: ExtensionContext): Promise<void> {
     file = context.asAbsolutePath(path.join('..', 'yaml-language-server', 'out', 'server', 'src', 'server.js'))
   }
   if (!fs.existsSync(file)) {
-    workspace.showMessage(`Can't resolve yarml-language-server`, 'error')
+    workspace.showMessage(`Can't resolve yaml-language-server`, 'error')
     return
   }
 
@@ -34,7 +34,7 @@ export async function activate(context: ExtensionContext): Promise<void> {
     args: ['--node-ipc'],
     transport: TransportKind.ipc,
     options: {
-      cwd: workspace.root,
+      cwd: workspace.cwd,
       execArgv: config.get<string[]>('execArgv', [])
     }
   }
@@ -61,10 +61,10 @@ export async function activate(context: ExtensionContext): Promise<void> {
   client.onReady().then(() => {
     client.sendNotification(SchemaAssociationNotification.type, getSchemaAssociation(context))
     client.sendNotification(DynamicCustomSchemaRequestRegistration.type)
-    client.onRequest(CUSTOM_SCHEMA_REQUEST,resource => {
+    client.onRequest(CUSTOM_SCHEMA_REQUEST, resource => {
       return schemaContributor.requestCustomSchema(resource)
     })
-    client.onRequest(CUSTOM_CONTENT_REQUEST,uri => {
+    client.onRequest(CUSTOM_CONTENT_REQUEST, uri => {
       return schemaContributor.requestCustomSchemaContent(uri)
     })
   }, e => {
