@@ -1,9 +1,8 @@
-import { ExtensionContext, extensions, LanguageClient, LanguageClientOptions, ServerOptions, services, TransportKind, workspace } from 'coc.nvim'
+import { Uri, ExtensionContext, extensions, LanguageClient, LanguageClientOptions, ServerOptions, services, TransportKind, workspace } from 'coc.nvim'
 import fs from 'fs'
 import path from 'path'
-import { NotificationType } from 'vscode-jsonrpc'
+import { NotificationType } from 'vscode-languageserver-protocol'
 import { CUSTOM_CONTENT_REQUEST, CUSTOM_SCHEMA_REQUEST, schemaContributor } from './schema-contributor'
-import Uri from 'vscode-uri'
 
 export interface ISchemaAssociations {
   [pattern: string]: string[]
@@ -59,8 +58,8 @@ export async function activate(context: ExtensionContext): Promise<void> {
   let client = new LanguageClient('yaml', 'yaml server', serverOptions, clientOptions)
 
   client.onReady().then(() => {
-    client.sendNotification(SchemaAssociationNotification.type, getSchemaAssociation(context))
-    client.sendNotification(DynamicCustomSchemaRequestRegistration.type)
+    client.sendNotification(SchemaAssociationNotification.type as any, getSchemaAssociation(context))
+    client.sendNotification<{}, {}>(DynamicCustomSchemaRequestRegistration.type as any)
     client.onRequest(CUSTOM_SCHEMA_REQUEST, resource => {
       return schemaContributor.requestCustomSchema(resource)
     })

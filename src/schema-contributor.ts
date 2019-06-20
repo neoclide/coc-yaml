@@ -1,4 +1,4 @@
-import Uri from 'vscode-uri'
+import { Uri } from 'coc.nvim'
 
 interface SchemaContributorProvider {
   readonly requestSchema: (resource: string) => string
