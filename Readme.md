@@ -107,7 +107,7 @@ This extension allows you to specify json schemas that you want to validate agai
 
 ## Debug
 
-Add `"yaml.server.trace": "verbose"` to your `coc-settings.json` to get verbose
+Add `"yaml.trace.server": "verbose"` to your `coc-settings.json` to get verbose
 output of LSP communication.
 
 Open output channel by command:
