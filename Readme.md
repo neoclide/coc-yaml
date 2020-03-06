@@ -42,10 +42,12 @@ The following settings are supported:
 - `yaml.format.singleQuote`: Use single quotes instead of double quotes
 - `yaml.format.bracketSpacing`: Print spaces between brackets in objects
 - `yaml.format.proseWrap`: Always: wrap prose if it exeeds the print width, Never: never wrap the prose, Preserve: wrap prose as-is
+- `yaml.format.printWidth`: Specify the line length that the printer will wrap on
 - `yaml.validate`: Enable/disable validation feature
 - `yaml.hover`: Enable/disable hover
 - `yaml.completion`: Enable/disable autocompletion
 - `yaml.schemas`: Helps you associate schemas with files in a glob pattern
+- `yaml.schemaStore.enable`: When set to true the YAML language server will pull in all available schemas from [JSON Schema Store](http://schemastore.org/json/)
 - `yaml.customTags`: Array of custom tags that the parser will validate against. It has two ways to be used. Either an item in the array is a custom tag such as "!Ref" or you can specify the type of the object !Ref should be by doing "!Ref Scalar". For example: ["!Ref", "!Some-Tag Scalar"]. The type of object can be one of Scalar, Sequence, Mapping, Map.
 - `[yaml]`: VSCode-YAML adds default configuration for all yaml files. More specifically it converts tabs to spaces to ensure valid yaml, sets the tab size, and allows live typing autocompletion. These settings can be modified via the corresponding settings inside the `[yaml]` section in the settings:
   - `editor.insertSpaces`
