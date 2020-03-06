@@ -3360,10 +3360,10 @@ yaml-ast-parser-custom-tags@0.0.43:
   resolved "https://registry.yarnpkg.com/yaml-ast-parser-custom-tags/-/yaml-ast-parser-custom-tags-0.0.43.tgz#46968145ce4e24cb03c3312057f0f141b93a7d02"
   integrity sha512-R5063FF/JSAN6qXCmylwjt9PcDH6M0ExEme/nJBzLspc6FJDmHHIqM7xh2WfEmsTJqClF79A9VkXjkAqmZw9SQ==
 
-yaml-language-server@^0.7.1:
-  version "0.7.1"
-  resolved "https://registry.yarnpkg.com/yaml-language-server/-/yaml-language-server-0.7.1.tgz#d941e5b7b455f35fb82ff1fd3ee57614e5a7949b"
-  integrity sha512-IgJDYDpFpwVu0p8oVwBfpnnNxknVd3qIgBL6reqTQX5nbBhB2vF15KVwbnctYQ7542QM0Omo2LwhJAXykfMezg==
+yaml-language-server@^0.7.2:
+  version "0.7.2"
+  resolved "https://registry.yarnpkg.com/yaml-language-server/-/yaml-language-server-0.7.2.tgz#1704a44632ec6a13b47ccd93cf7eee7026422af1"
+  integrity sha512-3jBsYrtnlaI5H6psW+0qzVh9LoQ21fuvC8KIupjPbQURb6cAMUGH5aElKREAevSSpgs7VIoqU1ZMCglIHm32OA==
   dependencies:
     js-yaml "^3.13.1"
     jsonc-parser "^2.1.0"
