@@ -52,58 +52,98 @@ The following settings are supported:
   - `editor.tabSize`
   - `editor.quickSuggestions`
 
+##### Adding custom tags
+
+In order to use the custom tags in your YAML file you need to first specify the custom tags in the setting of your code editor. For example, you can have the following custom tags:
+
+```YAML
+"yaml.customTags": [
+    "!Scalar-example scalar",
+    "!Seq-example sequence",
+    "!Mapping-example mapping"
+]
+```
+
+The !Scalar-example would map to a scalar custom tag, the !Seq-example would map to a sequence custom tag, the !Mapping-example would map to a mapping custom tag.
+
+You can then use the newly defined custom tags inside the YAML file:
+
+```YAML
+some_key: !Scalar-example some_value
+some_sequence: !Seq-example
+  - some_seq_key_1: some_seq_value_1
+  - some_seq_key_2: some_seq_value_2
+some_mapping: !Mapping-example
+  some_mapping_key_1: some_mapping_value_1
+  some_mapping_key_2: some_mapping_value_2
+```
+
 ##### Associating a schema to a glob pattern via yaml.schemas:
 
 yaml.schemas applies a schema to a file. In other words, the schema (placed on the left) is applied to the glob pattern on the right. Your schema can be local or online. Your schema must be a relative path and not an absolute path.
 
 When associating a schema it should follow the format below
 
-```
-yaml.schemas: {
+```JSON
+"yaml.schemas": {
     "url": "globPattern",
-    "Kubernetes": "globPattern",
-    "kedge": "globPattern"
+    "Kubernetes": "globPattern"
 }
 ```
 
 e.g.
 
-```
-yaml.schemas: {
-    "http://json.schemastore.org/composer": "/*"
+```JSON
+"yaml.schemas": {
+    "http://json.schemastore.org/composer": ["/*"],
+    "file:///home/johnd/some-schema.json": ["some.yaml"],
+    "../relative/path/schema.json": ["/config*.yaml"],
+    "/Users/johnd/some-schema.json": ["some.yaml"],
 }
 ```
 
 e.g.
 
-```
-yaml.schemas: {
-    "kubernetes": "/*.yaml"
+```JSON
+"yaml.schemas": {
+    "kubernetes": ["/myYamlFile.yaml"]
 }
 ```
 
 e.g.
 
-```
-yaml.schemas: {
-    "kedge": "/myKedgeApp.yaml"
+```JSON
+"yaml.schemas": {
+    "http://json.schemastore.org/composer": ["/*"],
+    "kubernetes": ["/myYamlFile.yaml"]
 }
 ```
 
-e.g.
+Since `0.11.0` YAML Schemas can be used for validation:
 
-```
-yaml.schemas: {
-    "http://json.schemastore.org/composer": "/*",
-    "kubernetes": "/myYamlFile.yaml"
-}
+```json
+"/home/user/custom_schema.yaml": "someFilePattern.yaml"
 ```
 
-- To add `yaml.schemas`, open settings file by command: `:CocConfig`.
+- The entrance point for `yaml.schemas` is location in [user and workspace settings](https://code.visualstudio.com/docs/getstarted/settings#_creating-user-and-workspace-settings)
 - Supports schemas through [schema store](http://schemastore.org/json/) as well as any other schema url
 - Supports 'yamlValidation' point which allows you to contribute a schema for a specific type of yaml file (Similar to [jsonValidation](https://code.visualstudio.com/docs/extensionAPI/extension-points#_contributesjsonvalidation))
+  e.g.
 
-This extension allows you to specify json schemas that you want to validate against the yaml that you write.
+```JSON
+{
+  "contributes": {
+    "yamlValidation": [
+      {
+        "fileMatch": "yourfile.yml",
+        "url": "./schema.json"
+      }
+    ]
+  }
+}
+```
+
+This extension allows you to specify json schemas that you want to validate against the yaml that you write. In the vscode user and workspace preferences you can set a url and a glob pattern that you want to validate against the schema. Kubernetes is an optional field. They do not require a url as the language server will provide that. You just need the keyword kubernetes and a glob pattern.
 
 ## Debug
 
