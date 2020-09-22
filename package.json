@@ -109,6 +109,6 @@
     "webpack-cli": "^3.3.4"
   },
   "dependencies": {
-    "yaml-language-server": "^0.10.0"
+    "yaml-language-server": "^0.11.0"
   }
 }
