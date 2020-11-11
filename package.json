@@ -9,7 +9,7 @@
     "yaml"
   ],
   "engines": {
-    "coc": "^0.0.32"
+    "coc": "^0.0.79"
   },
   "scripts": {
     "clean": "rimraf lib",
@@ -96,12 +96,10 @@
   "license": "MIT",
   "devDependencies": {
     "@chemzqm/tsconfig": "^0.0.3",
-    "@chemzqm/tslint-config": "^1.0.18",
     "@types/node": "^11.13.4",
-    "coc.nvim": "^0.0.71",
+    "coc.nvim": "^0.0.79",
     "rimraf": "^2.6.3",
     "ts-loader": "^6.0.3",
-    "tslint": "^5.15.0",
     "typescript": "^3.4.3",
     "vscode-languageserver": "^5.2.1",
     "vscode-languageserver-protocol": "^3.14.1",
@@ -109,6 +107,7 @@
     "webpack-cli": "^3.3.4"
   },
   "dependencies": {
+    "vscode-json-languageservice": "3.8.4",
     "yaml-language-server": "^0.12.0"
   }
 }
