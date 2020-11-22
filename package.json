@@ -107,6 +107,7 @@
     "webpack-cli": "^3.3.4"
   },
   "dependencies": {
+    "prettier": "^2.2.0",
     "vscode-json-languageservice": "3.8.4",
     "yaml-language-server": "^0.12.0"
   }
