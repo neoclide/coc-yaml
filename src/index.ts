@@ -1,104 +1,157 @@
-import { Uri, ExtensionContext, extensions, LanguageClient, LanguageClientOptions, ServerOptions, services, TransportKind, workspace } from 'coc.nvim'
-import fs from 'fs'
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Red Hat, Inc. All rights reserved.
+ *  Copyright (c) Adam Voss. All rights reserved.
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
 import path from 'path'
-import { NotificationType } from 'vscode-languageserver-protocol'
-import { CUSTOM_CONTENT_REQUEST, CUSTOM_SCHEMA_REQUEST, schemaContributor } from './schema-contributor'
+import { workspace, ExtensionContext, Uri, fetch, TransportKind, extensions, LanguageClient, LanguageClientOptions, ServerOptions } from 'coc.nvim'
+import { NotificationType, RequestType, } from 'vscode-languageserver-protocol'
+import { CUSTOM_SCHEMA_REQUEST, CUSTOM_CONTENT_REQUEST, SchemaExtensionAPI } from './schema-extension-api'
+import { joinPath } from './paths'
 
 export interface ISchemaAssociations {
   [pattern: string]: string[]
 }
 
-namespace SchemaAssociationNotification {
-  export const type: NotificationType<ISchemaAssociations, any> = new NotificationType('json/schemaAssociations')
+export interface ISchemaAssociation {
+  fileMatch: string[]
+  uri: string
 }
 
+// eslint-disable-next-line @typescript-eslint/no-namespace
+namespace SchemaAssociationNotification {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  export const type: NotificationType<ISchemaAssociations | ISchemaAssociation[], any> = new NotificationType(
+    'json/schemaAssociations'
+  )
+}
+
+// eslint-disable-next-line @typescript-eslint/no-namespace
+namespace VSCodeContentRequestRegistration {
+  // eslint-disable-next-line @typescript-eslint/ban-types
+  export const type: NotificationType<{}, {}> = new NotificationType('yaml/registerVSCodeContentRequest')
+}
+
+// eslint-disable-next-line @typescript-eslint/no-namespace
+namespace VSCodeContentRequest {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  export const type: RequestType<string, string, any, any> = new RequestType('vscode/content')
+}
+
+// eslint-disable-next-line @typescript-eslint/no-namespace
 namespace DynamicCustomSchemaRequestRegistration {
+  // eslint-disable-next-line @typescript-eslint/ban-types
   export const type: NotificationType<{}, {}> = new NotificationType('yaml/registerCustomSchemaRequest')
 }
 
-export async function activate(context: ExtensionContext): Promise<void> {
-  let { subscriptions } = context
-  const config = workspace.getConfiguration('yaml')
-  let file = context.asAbsolutePath(path.join('node_modules', 'yaml-language-server', 'out', 'server', 'src', 'server.js'))
-  if (!fs.existsSync(file)) {
-    file = context.asAbsolutePath(path.join('..', 'yaml-language-server', 'out', 'server', 'src', 'server.js'))
-  }
-  if (!fs.existsSync(file)) {
-    workspace.showMessage(`Can't resolve yaml-language-server`, 'error')
-    return
+let client: LanguageClient
+
+export function activate(context: ExtensionContext): SchemaExtensionAPI {
+  // The YAML language server is implemented in node
+  const serverModule = context.asAbsolutePath(
+    path.join('node_modules', 'yaml-language-server', 'out', 'server', 'src', 'server.js')
+  )
+
+  // The debug options for the server
+  const debugOptions = { execArgv: ['--nolazy', '--inspect=6009'] }
+
+  // If the extension is launched in debug mode then the debug server options are used
+  // Otherwise the run options are used
+  const serverOptions: ServerOptions = {
+    run: { module: serverModule, transport: TransportKind.ipc },
+    debug: { module: serverModule, transport: TransportKind.ipc, options: debugOptions },
   }
 
-  let serverOptions: ServerOptions = {
-    module: file,
-    args: ['--node-ipc'],
-    transport: TransportKind.ipc,
-    options: {
-      cwd: workspace.cwd,
-      execArgv: config.get<string[]>('execArgv', [])
-    }
-  }
-
-  let clientOptions: LanguageClientOptions = {
-    documentSelector: [
-      { language: 'yaml', scheme: 'file' },
-      { language: 'yaml', scheme: 'untitled' }
-    ],
+  // Options to control the language client
+  const clientOptions: LanguageClientOptions = {
+    // Register the server for on disk and newly created YAML documents
+    documentSelector: [{ language: 'yaml' }],
     synchronize: {
-      // Synchronize the setting section 'languageServerExample' to the server
-      configurationSection: ['yaml', 'http.proxy', 'http.proxyStrictSSL'],
-      // Notify the server about file changes to '.clientrc files contain in the workspace
-      fileEvents: [
-        workspace.createFileSystemWatcher('**/*.?(e)y?(a)ml'),
-        workspace.createFileSystemWatcher('**/*.json')
-      ]
+      // Synchronize these setting sections with the server
+      configurationSection: ['yaml', 'http.proxy', 'http.proxyStrictSSL', 'editor.tabSize', '[yaml]'],
+      // Notify the server about file changes to YAML and JSON files contained in the workspace
+      fileEvents: [workspace.createFileSystemWatcher('**/*.?(e)y?(a)ml'), workspace.createFileSystemWatcher('**/*.json')],
     },
-    outputChannelName: 'yaml'
   }
 
-  let client = new LanguageClient('yaml', 'yaml server', serverOptions, clientOptions)
+  // Create the language client and start it
+  client = new LanguageClient('yaml', 'YAML Support', serverOptions, clientOptions)
+  const disposable = client.start()
+
+  const schemaExtensionAPI = new SchemaExtensionAPI(client)
+
+  // Push the disposable to the context's subscriptions so that the
+  // client can be deactivated on extension deactivation
+  context.subscriptions.push(disposable)
 
   client.onReady().then(() => {
-    client.sendNotification(SchemaAssociationNotification.type as any, getSchemaAssociation(context))
-    client.sendNotification<{}, {}>(DynamicCustomSchemaRequestRegistration.type as any)
-    client.onRequest(CUSTOM_SCHEMA_REQUEST, resource => {
-      return schemaContributor.requestCustomSchema(resource)
+    // Send a notification to the server with any YAML schema associations in all extensions
+    client.sendNotification(SchemaAssociationNotification.type, getSchemaAssociations())
+
+    // If the extensions change, fire this notification again to pick up on any association changes
+    extensions.onDidActiveExtension(() => {
+      client.sendNotification(SchemaAssociationNotification.type, getSchemaAssociations())
     })
-    client.onRequest(CUSTOM_CONTENT_REQUEST, uri => {
-      return schemaContributor.requestCustomSchemaContent(uri)
+    extensions.onDidUnloadExtension(() => {
+      client.sendNotification(SchemaAssociationNotification.type, getSchemaAssociations())
     })
-  }, e => {
-    // tslint:disable-next-line:no-console
-    console.error(`yaml server start failed: ${e.message}`)
+    // Tell the server that the client is ready to provide custom schema content
+    client.sendNotification(DynamicCustomSchemaRequestRegistration.type)
+    // Tell the server that the client supports schema requests sent directly to it
+    client.sendNotification(VSCodeContentRequestRegistration.type)
+    // If the server asks for custom schema content, get it and send it back
+    client.onRequest(CUSTOM_SCHEMA_REQUEST, (resource: string) => {
+      return schemaExtensionAPI.requestCustomSchema(resource)
+    })
+    client.onRequest(CUSTOM_CONTENT_REQUEST, (uri: string) => {
+      return schemaExtensionAPI.requestCustomSchemaContent(uri)
+    })
+    client.onRequest(VSCodeContentRequest.type, (uri: string) => {
+      return fetch(uri, {
+        headers: { 'Accept-Encoding': 'gzip, deflate' }
+      }).then(res => {
+        if (typeof res === 'string') return res
+        if (Buffer.isBuffer(res)) return res.toString()
+        return JSON.stringify(res)
+      }, err => {
+        return Promise.reject(err)
+      })
+    })
   })
 
-  subscriptions.push(services.registLanguageClient(client))
+  return schemaExtensionAPI
 }
 
-function getSchemaAssociation(_context: ExtensionContext): ISchemaAssociations {
-  let associations: ISchemaAssociations = {}
-  extensions.all.forEach(extension => {
-    let packageJSON = extension.packageJSON
+function getSchemaAssociations(): ISchemaAssociation[] {
+  const associations: ISchemaAssociation[] = []
+  extensions.all.forEach((extension) => {
+    const packageJSON = extension.packageJSON
     if (packageJSON && packageJSON.contributes && packageJSON.contributes.yamlValidation) {
-      let yamlValidation = packageJSON.contributes.yamlValidation
+      const yamlValidation = packageJSON.contributes.yamlValidation
       if (Array.isArray(yamlValidation)) {
-        yamlValidation.forEach(jv => {
+        yamlValidation.forEach((jv) => {
+          // eslint-disable-next-line prefer-const
           let { fileMatch, url } = jv
-          if (fileMatch && url) {
-            if (url[0] === '.' && url[1] === '/') {
-              url = Uri.file(path.join(extension.extensionPath, url)).toString()
+          if (typeof fileMatch === 'string') {
+            fileMatch = [fileMatch]
+          }
+          if (Array.isArray(fileMatch) && typeof url === 'string') {
+            let uri: string = url
+            if (uri[0] === '.' && uri[1] === '/') {
+              uri = joinPath(Uri.file(extension.extensionPath), uri).toString()
             }
-            if (fileMatch[0] === '%') {
-              fileMatch = fileMatch.replace(/%APP_SETTINGS_HOME%/, '/User')
-              fileMatch = fileMatch.replace(/%APP_WORKSPACES_HOME%/, '/Workspaces')
-            } else if (fileMatch.charAt(0) !== '/' && !fileMatch.match(/\w+:\/\//)) {
-              fileMatch = '/' + fileMatch
-            }
-            let association = associations[fileMatch]
-            if (!association) {
-              association = []
-              associations[fileMatch] = association
-            }
-            association.push(url)
+            fileMatch = fileMatch.map((fm) => {
+              if (fm[0] === '%') {
+                fm = fm.replace(/%APP_SETTINGS_HOME%/, '/User')
+                fm = fm.replace(/%MACHINE_SETTINGS_HOME%/, '/Machine')
+                fm = fm.replace(/%APP_WORKSPACES_HOME%/, '/Workspaces')
+              } else if (!fm.match(/^(\w+:\/\/|\/|!)/)) {
+                fm = '/' + fm
+              }
+              return fm
+            })
+            associations.push({ fileMatch, uri })
           }
         })
       }
