@@ -9,12 +9,11 @@
     "yaml"
   ],
   "engines": {
-    "coc": "^0.0.79"
+    "coc": "^0.0.80"
   },
   "scripts": {
-    "clean": "rimraf lib",
     "build": "webpack",
-    "prepare": "npx npm-run-all clean build"
+    "prepare": "webpack"
   },
   "activationEvents": [
     "onLanguage:yaml"
@@ -106,8 +105,8 @@
   "license": "MIT",
   "devDependencies": {
     "@chemzqm/tsconfig": "^0.0.3",
-    "@types/node": "^11.13.4",
-    "coc.nvim": "^0.0.79",
+    "@types/node": "10.12.0",
+    "coc.nvim": "^0.0.80",
     "rimraf": "^2.6.3",
     "ts-loader": "^6.0.3",
     "typescript": "^4.1.2",
@@ -119,6 +118,6 @@
   "dependencies": {
     "prettier": "2.0.5",
     "vscode-json-languageservice": "^3.10.0",
-    "yaml-language-server": "next"
+    "yaml-language-server": "^0.13.1-d0f9b44.0"
   }
 }
