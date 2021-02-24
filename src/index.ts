@@ -5,8 +5,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 import path from 'path'
-import { workspace, ExtensionContext, Uri, fetch, TransportKind, extensions, LanguageClient, LanguageClientOptions, ServerOptions } from 'coc.nvim'
-import { NotificationType, RequestType, } from 'vscode-languageserver-protocol'
+import { workspace, NotificationType, RequestType, ExtensionContext, RevealOutputChannelOn, Uri, fetch, TransportKind, extensions, LanguageClient, LanguageClientOptions, ServerOptions } from 'coc.nvim'
 import { CUSTOM_SCHEMA_REQUEST, CUSTOM_CONTENT_REQUEST, SchemaExtensionAPI } from './schema-extension-api'
 import { joinPath } from './paths'
 
@@ -19,29 +18,21 @@ export interface ISchemaAssociation {
   uri: string
 }
 
-// eslint-disable-next-line @typescript-eslint/no-namespace
 namespace SchemaAssociationNotification {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   export const type: NotificationType<ISchemaAssociations | ISchemaAssociation[], any> = new NotificationType(
     'json/schemaAssociations'
   )
 }
 
-// eslint-disable-next-line @typescript-eslint/no-namespace
 namespace VSCodeContentRequestRegistration {
-  // eslint-disable-next-line @typescript-eslint/ban-types
   export const type: NotificationType<{}, {}> = new NotificationType('yaml/registerVSCodeContentRequest')
 }
 
-// eslint-disable-next-line @typescript-eslint/no-namespace
 namespace VSCodeContentRequest {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   export const type: RequestType<string, string, any, any> = new RequestType('vscode/content')
 }
 
-// eslint-disable-next-line @typescript-eslint/no-namespace
 namespace DynamicCustomSchemaRequestRegistration {
-  // eslint-disable-next-line @typescript-eslint/ban-types
   export const type: NotificationType<{}, {}> = new NotificationType('yaml/registerCustomSchemaRequest')
 }
 
@@ -73,6 +64,7 @@ export function activate(context: ExtensionContext): SchemaExtensionAPI {
       // Notify the server about file changes to YAML and JSON files contained in the workspace
       fileEvents: [workspace.createFileSystemWatcher('**/*.?(e)y?(a)ml'), workspace.createFileSystemWatcher('**/*.json')],
     },
+    revealOutputChannelOn: RevealOutputChannelOn.Never
   }
 
   // Create the language client and start it

@@ -1,5 +1,4 @@
-import { workspace, LanguageClient, Uri } from 'coc.nvim'
-import { RequestType } from 'vscode-languageserver-protocol'
+import { workspace, LanguageClient, RequestType, Uri } from 'coc.nvim'
 
 interface SchemaContributorProvider {
   readonly requestSchema: (resource: string) => string
