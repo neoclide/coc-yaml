@@ -111,6 +111,6 @@
   },
   "dependencies": {
     "prettier": "2.0.5",
-    "yaml-language-server": "0.13.1-d0f9b44.0"
+    "yaml-language-server": "0.17.0"
   }
 }
