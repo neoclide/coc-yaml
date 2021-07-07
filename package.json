@@ -96,6 +96,21 @@
           "type": "boolean",
           "default": true,
           "description": "Automatically pull available YAML schemas from JSON Schema Store"
+        },
+        "yaml.schemaStore.url": {
+          "type": "string",
+          "default": "https://www.schemastore.org/api/json/catalog.json",
+          "description": "URL of schema store catalog to use"
+        },
+        "yaml.disableAdditionalProperties": {
+          "type": "boolean",
+          "default": false,
+          "description": "Globally set additionalProperties to false for all objects. So if its true, no extra properties are allowed inside yaml."
+        },
+        "yaml.maxItemsComputed": {
+          "type": "integer",
+          "default": 5000,
+          "description": "The maximum number of outline symbols and folding regions computed (limited for performance reasons)."
         }
       }
     }
