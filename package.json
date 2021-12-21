@@ -126,7 +126,7 @@
   },
   "dependencies": {
     "prettier": "2.0.5",
-    "vscode-json-languageservice": "4.1.0",
-    "yaml-language-server": "0.22.0"
+    "vscode-json-languageservice": "4.1.7",
+    "yaml-language-server": "1.2.2"
   }
 }
