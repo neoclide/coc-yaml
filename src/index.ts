@@ -59,12 +59,9 @@ export function activate(context: ExtensionContext): SchemaExtensionAPI {
     // Register the server for on disk and newly created YAML documents
     documentSelector: [{ language: 'yaml' }],
     synchronize: {
-      // Synchronize these setting sections with the server
-      configurationSection: ['yaml', 'http.proxy', 'http.proxyStrictSSL', 'editor.tabSize', '[yaml]'],
       // Notify the server about file changes to YAML and JSON files contained in the workspace
       fileEvents: [workspace.createFileSystemWatcher('**/*.?(e)y?(a)ml'), workspace.createFileSystemWatcher('**/*.json')],
-    },
-    revealOutputChannelOn: RevealOutputChannelOn.Never
+    }
   }
 
   // Create the language client and start it
