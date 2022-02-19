@@ -85,7 +85,6 @@ export function activate(context: ExtensionContext): SchemaExtensionAPI {
     // Register the server for on disk and newly created YAML documents
     documentSelector: [{ language: 'yaml' }, { language: 'dockercompose' }, { pattern: '*.y(a)ml' }],
     synchronize: {
-      configurationSection: 'yaml',
       // Notify the server about file changes to YAML and JSON files contained in the workspace
       fileEvents: [workspace.createFileSystemWatcher('**/*.?(e)y?(a)ml'), workspace.createFileSystemWatcher('**/*.json')],
     },
