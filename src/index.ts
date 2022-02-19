@@ -5,9 +5,10 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 import path from 'path'
-import { workspace, NotificationType, RequestType, ExtensionContext, RevealOutputChannelOn, Uri, fetch, TransportKind, extensions, LanguageClient, LanguageClientOptions, ServerOptions } from 'coc.nvim'
+import { workspace, services, NotificationType, RequestType, ExtensionContext, Uri, fetch, TransportKind, extensions, LanguageClient, LanguageClientOptions, ServerOptions, RevealOutputChannelOn } from 'coc.nvim'
 import { CUSTOM_SCHEMA_REQUEST, CUSTOM_CONTENT_REQUEST, SchemaExtensionAPI } from './schema-extension-api'
 import { joinPath } from './paths'
+import StatusItem from './status-item'
 
 export interface ISchemaAssociations {
   [pattern: string]: string[]
@@ -19,24 +20,27 @@ export interface ISchemaAssociation {
 }
 
 namespace SchemaAssociationNotification {
-  export const type: NotificationType<ISchemaAssociations | ISchemaAssociation[], any> = new NotificationType(
+  export const type: NotificationType<ISchemaAssociations | ISchemaAssociation[]> = new NotificationType(
     'json/schemaAssociations'
   )
 }
 
 namespace VSCodeContentRequestRegistration {
-  export const type: NotificationType<{}, {}> = new NotificationType('yaml/registerVSCodeContentRequest')
+  export const type: NotificationType<{}> = new NotificationType('yaml/registerVSCodeContentRequest')
 }
 
 namespace VSCodeContentRequest {
-  export const type: RequestType<string, string, any, any> = new RequestType('vscode/content')
+  export const type: RequestType<string, string, any> = new RequestType('vscode/content')
 }
 
 namespace DynamicCustomSchemaRequestRegistration {
-  export const type: NotificationType<{}, {}> = new NotificationType('yaml/registerCustomSchemaRequest')
+  export const type: NotificationType<{}> = new NotificationType('yaml/registerCustomSchemaRequest')
 }
 
-let client: LanguageClient
+export namespace SchemaSelectionRequests {
+  export const type: NotificationType<void> = new NotificationType('yaml/supportSchemaSelection')
+  export const schemaStoreInitialized: NotificationType<void> = new NotificationType('yaml/schema/store/initialized')
+}
 
 export function activate(context: ExtensionContext): SchemaExtensionAPI {
   // The YAML language server is implemented in node
@@ -61,18 +65,19 @@ export function activate(context: ExtensionContext): SchemaExtensionAPI {
     synchronize: {
       // Notify the server about file changes to YAML and JSON files contained in the workspace
       fileEvents: [workspace.createFileSystemWatcher('**/*.?(e)y?(a)ml'), workspace.createFileSystemWatcher('**/*.json')],
-    }
+    },
+    revealOutputChannelOn: RevealOutputChannelOn.Never,
   }
 
   // Create the language client and start it
-  client = new LanguageClient('yaml', 'YAML Support', serverOptions, clientOptions)
-  const disposable = client.start()
+  const client = new LanguageClient('yaml', 'YAML Support', serverOptions, clientOptions)
+  context.subscriptions.push(new StatusItem(client))
+  // const disposable = client.start()
 
   const schemaExtensionAPI = new SchemaExtensionAPI(client)
-
   // Push the disposable to the context's subscriptions so that the
   // client can be deactivated on extension deactivation
-  context.subscriptions.push(disposable)
+  context.subscriptions.push(services.registLanguageClient(client))
 
   client.onReady().then(() => {
     // Send a notification to the server with any YAML schema associations in all extensions
@@ -85,6 +90,9 @@ export function activate(context: ExtensionContext): SchemaExtensionAPI {
     extensions.onDidUnloadExtension(() => {
       client.sendNotification(SchemaAssociationNotification.type, getSchemaAssociations())
     })
+
+    // Tell the server that the client supports schema selection requests
+    client.sendNotification(SchemaSelectionRequests.type)
     // Tell the server that the client is ready to provide custom schema content
     client.sendNotification(DynamicCustomSchemaRequestRegistration.type)
     // Tell the server that the client supports schema requests sent directly to it
@@ -98,14 +106,18 @@ export function activate(context: ExtensionContext): SchemaExtensionAPI {
     })
     client.onRequest(VSCodeContentRequest.type, (uri: string) => {
       return fetch(uri, {
-        headers: { 'Accept-Encoding': 'gzip, deflate' }
+        headers: { 'Accept-Encoding': 'gzip, deflate' },
+        buffer: true
       }).then(res => {
-        if (typeof res === 'string') return res
         if (Buffer.isBuffer(res)) return res.toString()
         return JSON.stringify(res)
       }, err => {
         return Promise.reject(err)
       })
+    })
+
+    client.onNotification(SchemaSelectionRequests.schemaStoreInitialized, () => {
+      context.subscriptions.push(new StatusItem(client))
     })
   })
 
