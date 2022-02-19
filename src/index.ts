@@ -4,12 +4,13 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-import { workspace, services, window, NotificationType, RequestType, ExtensionContext, Uri, TransportKind, extensions, LanguageClient, LanguageClientOptions, ServerOptions, RevealOutputChannelOn } from 'coc.nvim'
+import { workspace, listManager, services, window, NotificationType, RequestType, ExtensionContext, Uri, TransportKind, extensions, LanguageClient, LanguageClientOptions, ServerOptions, RevealOutputChannelOn, commands } from 'coc.nvim'
 import { CUSTOM_SCHEMA_REQUEST, CUSTOM_CONTENT_REQUEST, SchemaExtensionAPI } from './schema-extension-api'
 import { joinPath } from './paths'
 import StatusItem from './status-item'
 import { JSONSchemaCache } from './schema-cache'
 import { JSONSchemaDocumentContentProvider, getJsonSchemaContent } from './content-provider'
+import SchemaList from './list'
 import { promisify } from 'util'
 import fs from 'fs'
 
@@ -80,9 +81,11 @@ export function activate(context: ExtensionContext): SchemaExtensionAPI {
 
   // Options to control the language client
   const clientOptions: LanguageClientOptions = {
+    // configurationSection
     // Register the server for on disk and newly created YAML documents
     documentSelector: [{ language: 'yaml' }, { language: 'dockercompose' }, { pattern: '*.y(a)ml' }],
     synchronize: {
+      configurationSection: 'yaml',
       // Notify the server about file changes to YAML and JSON files contained in the workspace
       fileEvents: [workspace.createFileSystemWatcher('**/*.?(e)y?(a)ml'), workspace.createFileSystemWatcher('**/*.json')],
     },
@@ -98,6 +101,10 @@ export function activate(context: ExtensionContext): SchemaExtensionAPI {
   // client can be deactivated on extension deactivation
   context.subscriptions.push(services.registLanguageClient(client))
 
+  context.subscriptions.push(listManager.registerList(new SchemaList(client)))
+  context.subscriptions.push(commands.registerCommand('yaml.selectSchema', () => {
+    workspace.nvim.command(`CocList yamlschemas`, true)
+  }))
   const schemaCache = new JSONSchemaCache(context.storagePath, context.globalState, msg => {
     client.outputChannel.appendLine(msg)
   })

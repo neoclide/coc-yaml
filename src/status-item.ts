@@ -1,7 +1,7 @@
 import { workspace, disposeAll, RequestType, events, Document, StatusBarItem, window, LanguageClient, Disposable, ExtensionContext } from 'coc.nvim'
 
 type FileUri = string
-interface JSONSchema {
+export interface JSONSchema {
   name?: string
   description?: string
   uri: string
