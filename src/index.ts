@@ -5,7 +5,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 import path from 'path'
-import { workspace, services, NotificationType, RequestType, ExtensionContext, Uri, TransportKind, extensions, LanguageClient, LanguageClientOptions, ServerOptions, RevealOutputChannelOn } from 'coc.nvim'
+import { workspace, services, window, commands, NotificationType, RequestType, ExtensionContext, Uri, TransportKind, extensions, LanguageClient, LanguageClientOptions, ServerOptions, RevealOutputChannelOn } from 'coc.nvim'
 import { CUSTOM_SCHEMA_REQUEST, CUSTOM_CONTENT_REQUEST, SchemaExtensionAPI } from './schema-extension-api'
 import { joinPath } from './paths'
 import StatusItem from './status-item'
@@ -21,6 +21,16 @@ export interface ISchemaAssociations {
 export interface ISchemaAssociation {
   fileMatch: string[]
   uri: string
+}
+
+// eslint-disable-next-line @typescript-eslint/no-namespace
+namespace SettingIds {
+  export const maxItemsComputed = 'yaml.maxItemsComputed'
+}
+
+// eslint-disable-next-line @typescript-eslint/no-namespace
+namespace StorageIds {
+  export const maxItemsExceededInformation = 'yaml.maxItemsExceededInformation'
 }
 
 namespace SchemaAssociationNotification {
@@ -44,6 +54,10 @@ namespace VSCodeContentRequest {
 
 namespace DynamicCustomSchemaRequestRegistration {
   export const type: NotificationType<{}> = new NotificationType('yaml/registerCustomSchemaRequest')
+}
+
+namespace ResultLimitReachedNotification {
+  export const type: NotificationType<string> = new NotificationType('yaml/resultLimitReached')
 }
 
 export namespace SchemaSelectionRequests {
@@ -128,6 +142,26 @@ export function activate(context: ExtensionContext): SchemaExtensionAPI {
 
     client.onNotification(SchemaSelectionRequests.schemaStoreInitialized, () => {
       statusBarItem.init()
+    })
+    client.onNotification(ResultLimitReachedNotification.type, async (message) => {
+      const shouldPrompt = context.globalState.get<boolean>(StorageIds.maxItemsExceededInformation) !== false
+      if (shouldPrompt) {
+        const ok = 'Ok'
+        const openSettings = 'Open Settings'
+        const neverAgain = "Don't Show Again"
+        const pick = await window.showInformationMessage(
+          `${message}\nUse setting '${SettingIds.maxItemsComputed}' to configure the limit.`,
+          ok,
+          openSettings,
+          neverAgain
+        )
+        if (pick === neverAgain) {
+          await context.globalState.update(StorageIds.maxItemsExceededInformation, false)
+        } else if (pick === openSettings) {
+          const { nvim } = workspace
+          nvim.command('CocConfig', true)
+        }
+      }
     })
   })
   return schemaExtensionAPI
