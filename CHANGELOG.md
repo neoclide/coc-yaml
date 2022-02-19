@@ -1,3 +1,7 @@
+# 1.7.1
+
+- And `yaml.selectSchema` command.
+
 # 1.7.0
 
 - Add configuration `yaml.disableDefaultProperties`.
