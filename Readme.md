@@ -56,12 +56,13 @@ The following settings are supported:
 - `yaml.schemas` (default: `{}`): Helps you associate schemas with files in a glob pattern
 - `yaml.schemaStore.enable`: When set to true the YAML language server will pull in all available schemas from [JSON Schema Store](http://schemastore.org/json/)
 - `yaml.customTags` (default: `[]`): Array of custom tags that the parser will validate against. It has two ways to be used. Either an item in the array is a custom tag such as "!Ref" or you can specify the type of the object !Ref should be by doing "!Ref Scalar". For example: ["!Ref", "!Some-Tag Scalar"]. The type of object can be one of Scalar, Sequence, Mapping, Map.
-- `[yaml]`: VSCode-YAML adds default configuration for all yaml files. More specifically it converts tabs to spaces to ensure valid yaml, sets the tab size, and allows live typing autocompletion. These settings can be modified via the corresponding settings inside the `[yaml]` section in the settings:
-  - `editor.insertSpaces`
-  - `editor.tabSize`
-  - `editor.quickSuggestions`
+- `yaml.maxComputedItems`: The maximum number of outline symbols and folding regions computed (limited for performance reasons).
+- `yaml.disableDefaultProperties`: Disable adding not required properties with default values into completion text (default is false).
+  **Note** `insertSpaces` and `tabSize` settings may not work, you need ensure `&shiftwidth` and `&expandtab` options of your yaml buffer.
 
-**Note** `insertSpaces` and `tabSize` settings may not work, you need ensure `&shiftwidth` and `&expandtab` options of your yaml buffer.
+- `http.proxy`: The URL of the proxy server that will be used when attempting to download a schema. If it is not set or it is undefined no proxy server will be used.
+
+- `http.proxyStrictSSL`: If true the proxy server certificate should be verified against the list of supplied CAs. Default is false.
 
 ##### Adding custom tags
 
