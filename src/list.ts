@@ -50,7 +50,7 @@ export default class SchemaList implements IList {
     } else {
       newSettings[schemaURI] = fileUri
     }
-    workspace.getConfiguration('yaml').update('schemas', newSettings, true)
+    workspace.getConfiguration('yaml').update('schemas', newSettings)
   }
 
   public async loadItems(context: ListContext, token: CancellationToken): Promise<ListItem[]> {
