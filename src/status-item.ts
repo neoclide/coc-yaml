@@ -14,6 +14,7 @@ export default class StatusBar implements Disposable {
   private item: StatusBarItem
   private text: string
   private disposables: Disposable[] = []
+  private attached = false
   constructor(private client: LanguageClient) {
     this.item = window.createStatusBarItem(99, {})
     let config = workspace.getConfiguration('yaml')
@@ -26,12 +27,16 @@ export default class StatusBar implements Disposable {
       let doc = workspace.getDocument(workspace.bufnr)
       if (doc) void this.checkDocument(doc)
     }, null, this.disposables)
+  }
+
+  public init(): void {
+    this.attached = true
     let doc = workspace.getDocument(workspace.bufnr)
     if (doc) void this.checkDocument(doc)
   }
 
   private async checkDocument(doc: Document): Promise<void> {
-    if (!doc || !doc.attached) return
+    if (!doc || !doc.attached || !this.attached) return
     const item = this.item
     if (!this.client.started) {
       item.hide()

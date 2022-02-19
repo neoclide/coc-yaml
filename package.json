@@ -132,11 +132,13 @@
     "@types/node": "10.12.0",
     "coc.nvim": "^0.0.81-next.16",
     "esbuild": "^0.8.51",
+    "fs-extra": "^10.0.0",
+    "request-light": "^0.5.7",
     "typescript": "^4.3.5"
   },
   "dependencies": {
     "prettier": "2.0.5",
     "vscode-json-languageservice": "4.1.7",
-    "yaml-language-server": "1.2.2"
+    "yaml-language-server": "1.4.0"
   }
 }

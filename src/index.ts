@@ -5,10 +5,14 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 import path from 'path'
-import { workspace, services, NotificationType, RequestType, ExtensionContext, Uri, fetch, TransportKind, extensions, LanguageClient, LanguageClientOptions, ServerOptions, RevealOutputChannelOn } from 'coc.nvim'
+import { workspace, services, NotificationType, RequestType, ExtensionContext, Uri, TransportKind, extensions, LanguageClient, LanguageClientOptions, ServerOptions, RevealOutputChannelOn } from 'coc.nvim'
 import { CUSTOM_SCHEMA_REQUEST, CUSTOM_CONTENT_REQUEST, SchemaExtensionAPI } from './schema-extension-api'
 import { joinPath } from './paths'
 import StatusItem from './status-item'
+import { JSONSchemaCache } from './schema-cache'
+import { IJSONSchemaCache, getJsonSchemaContent } from './content-provider'
+import { promisify } from 'util'
+import fs from 'fs'
 
 export interface ISchemaAssociations {
   [pattern: string]: string[]
@@ -23,6 +27,11 @@ namespace SchemaAssociationNotification {
   export const type: NotificationType<ISchemaAssociations | ISchemaAssociation[]> = new NotificationType(
     'json/schemaAssociations'
   )
+}
+
+namespace FSReadFile {
+  // eslint-disable-next-line @typescript-eslint/ban-types
+  export const type: RequestType<string, string, {}> = new RequestType('fs/readFile')
 }
 
 namespace VSCodeContentRequestRegistration {
@@ -71,13 +80,18 @@ export function activate(context: ExtensionContext): SchemaExtensionAPI {
 
   // Create the language client and start it
   const client = new LanguageClient('yaml', 'YAML Support', serverOptions, clientOptions)
-  context.subscriptions.push(new StatusItem(client))
   // const disposable = client.start()
 
   const schemaExtensionAPI = new SchemaExtensionAPI(client)
   // Push the disposable to the context's subscriptions so that the
   // client can be deactivated on extension deactivation
   context.subscriptions.push(services.registLanguageClient(client))
+
+  const schemaCache = new JSONSchemaCache(context.storagePath, context.globalState, msg => {
+    client.outputChannel.appendLine(msg)
+  })
+  const statusBarItem = new StatusItem(client)
+  context.subscriptions.push(statusBarItem)
 
   client.onReady().then(() => {
     // Send a notification to the server with any YAML schema associations in all extensions
@@ -104,23 +118,18 @@ export function activate(context: ExtensionContext): SchemaExtensionAPI {
     client.onRequest(CUSTOM_CONTENT_REQUEST, (uri: string) => {
       return schemaExtensionAPI.requestCustomSchemaContent(uri)
     })
+    client.onRequest(FSReadFile.type, (fsPath: string) => {
+      return promisify(fs.readFile)(fsPath, 'utf8')
+    })
+
     client.onRequest(VSCodeContentRequest.type, (uri: string) => {
-      return fetch(uri, {
-        headers: { 'Accept-Encoding': 'gzip, deflate' },
-        buffer: true
-      }).then(res => {
-        if (Buffer.isBuffer(res)) return res.toString()
-        return JSON.stringify(res)
-      }, err => {
-        return Promise.reject(err)
-      })
+      return getJsonSchemaContent(uri, schemaCache)
     })
 
     client.onNotification(SchemaSelectionRequests.schemaStoreInitialized, () => {
-      context.subscriptions.push(new StatusItem(client))
+      statusBarItem.init()
     })
   })
-
   return schemaExtensionAPI
 }
 

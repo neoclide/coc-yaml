@@ -29,7 +29,7 @@ export interface SchemaDeletions {
 // eslint-disable-next-line @typescript-eslint/no-namespace
 namespace SchemaModificationNotification {
   // eslint-disable-next-line @typescript-eslint/ban-types
-  export const type: RequestType<SchemaAdditions | SchemaDeletions, void, {}, {}> = new RequestType('json/schema/modify')
+  export const type: RequestType<SchemaAdditions | SchemaDeletions, void, {}> = new RequestType('json/schema/modify')
 }
 
 export interface ExtensionAPI {
