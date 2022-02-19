@@ -1,8 +1,9 @@
 import { workspace, LanguageClient, RequestType, Uri } from 'coc.nvim'
 
+
 interface SchemaContributorProvider {
   readonly requestSchema: (resource: string) => string
-  readonly requestSchemaContent: (uri: string) => string
+  readonly requestSchemaContent: (uri: string) => Promise<string> | string
   readonly label?: string
 }
 
@@ -120,7 +121,9 @@ class SchemaExtensionAPI implements ExtensionAPI {
           matches.push(uri)
         }
       } catch (error) {
-        this._yamlClient.outputChannel.appendLine(`Error thrown while requesting schema "${error}" when calling the registered contributor "${customKey}"`)
+        logToExtensionOutputChannel(
+          `Error thrown while requesting schema "${error}" when calling the registered contributor "${customKey}"`
+        )
       }
     }
     return matches
@@ -132,7 +135,7 @@ class SchemaExtensionAPI implements ExtensionAPI {
    * @param {string} uri the schema uri returned from requestSchema.
    * @returns {string} the schema content
    */
-  public requestCustomSchemaContent(uri: string): string {
+  public requestCustomSchemaContent(uri: string): Promise<string> | string {
     if (uri) {
       const _uri = Uri.parse(uri)
 
@@ -148,6 +151,10 @@ class SchemaExtensionAPI implements ExtensionAPI {
 
   public async modifySchemaContent(schemaModifications: SchemaAdditions | SchemaDeletions): Promise<void> {
     return this._yamlClient.sendRequest(SchemaModificationNotification.type, schemaModifications)
+  }
+
+  public hasProvider(schema: string): boolean {
+    return this._customSchemaContributors[schema] !== undefined
   }
 }
 

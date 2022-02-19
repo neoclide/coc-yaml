@@ -4,13 +4,12 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-import path from 'path'
-import { workspace, services, window, commands, NotificationType, RequestType, ExtensionContext, Uri, TransportKind, extensions, LanguageClient, LanguageClientOptions, ServerOptions, RevealOutputChannelOn } from 'coc.nvim'
+import { workspace, services, window, NotificationType, RequestType, ExtensionContext, Uri, TransportKind, extensions, LanguageClient, LanguageClientOptions, ServerOptions, RevealOutputChannelOn } from 'coc.nvim'
 import { CUSTOM_SCHEMA_REQUEST, CUSTOM_CONTENT_REQUEST, SchemaExtensionAPI } from './schema-extension-api'
 import { joinPath } from './paths'
 import StatusItem from './status-item'
 import { JSONSchemaCache } from './schema-cache'
-import { IJSONSchemaCache, getJsonSchemaContent } from './content-provider'
+import { JSONSchemaDocumentContentProvider, getJsonSchemaContent } from './content-provider'
 import { promisify } from 'util'
 import fs from 'fs'
 
@@ -23,12 +22,10 @@ export interface ISchemaAssociation {
   uri: string
 }
 
-// eslint-disable-next-line @typescript-eslint/no-namespace
 namespace SettingIds {
   export const maxItemsComputed = 'yaml.maxItemsComputed'
 }
 
-// eslint-disable-next-line @typescript-eslint/no-namespace
 namespace StorageIds {
   export const maxItemsExceededInformation = 'yaml.maxItemsExceededInformation'
 }
@@ -40,7 +37,6 @@ namespace SchemaAssociationNotification {
 }
 
 namespace FSReadFile {
-  // eslint-disable-next-line @typescript-eslint/ban-types
   export const type: RequestType<string, string, {}> = new RequestType('fs/readFile')
 }
 
@@ -67,9 +63,10 @@ export namespace SchemaSelectionRequests {
 
 export function activate(context: ExtensionContext): SchemaExtensionAPI {
   // The YAML language server is implemented in node
-  const serverModule = context.asAbsolutePath(
-    path.join('node_modules', 'yaml-language-server', 'out', 'server', 'src', 'server.js')
-  )
+  // const serverModule = context.asAbsolutePath(
+  //   path.join('node_modules', 'yaml-language-server', 'out', 'server', 'src', 'server.js')
+  // )
+  const serverModule = context.asAbsolutePath('./dist/languageserver.js')
 
   // The debug options for the server
   const debugOptions = { execArgv: ['--nolazy', '--inspect=6009'] }
@@ -84,7 +81,7 @@ export function activate(context: ExtensionContext): SchemaExtensionAPI {
   // Options to control the language client
   const clientOptions: LanguageClientOptions = {
     // Register the server for on disk and newly created YAML documents
-    documentSelector: [{ language: 'yaml' }],
+    documentSelector: [{ language: 'yaml' }, { language: 'dockercompose' }, { pattern: '*.y(a)ml' }],
     synchronize: {
       // Notify the server about file changes to YAML and JSON files contained in the workspace
       fileEvents: [workspace.createFileSystemWatcher('**/*.?(e)y?(a)ml'), workspace.createFileSystemWatcher('**/*.json')],
@@ -106,6 +103,12 @@ export function activate(context: ExtensionContext): SchemaExtensionAPI {
   })
   const statusBarItem = new StatusItem(client)
   context.subscriptions.push(statusBarItem)
+  context.subscriptions.push(
+    workspace.registerTextDocumentContentProvider(
+      'json-schema',
+      new JSONSchemaDocumentContentProvider(schemaCache, schemaExtensionAPI)
+    )
+  )
 
   client.onReady().then(() => {
     // Send a notification to the server with any YAML schema associations in all extensions
@@ -119,12 +122,12 @@ export function activate(context: ExtensionContext): SchemaExtensionAPI {
       client.sendNotification(SchemaAssociationNotification.type, getSchemaAssociations())
     })
 
-    // Tell the server that the client supports schema selection requests
-    client.sendNotification(SchemaSelectionRequests.type)
     // Tell the server that the client is ready to provide custom schema content
     client.sendNotification(DynamicCustomSchemaRequestRegistration.type)
     // Tell the server that the client supports schema requests sent directly to it
     client.sendNotification(VSCodeContentRequestRegistration.type)
+    // Tell the server that the client supports schema selection requests
+    client.sendNotification(SchemaSelectionRequests.type)
     // If the server asks for custom schema content, get it and send it back
     client.onRequest(CUSTOM_SCHEMA_REQUEST, (resource: string) => {
       return schemaExtensionAPI.requestCustomSchema(resource)

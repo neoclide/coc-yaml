@@ -1,10 +1,41 @@
-import { workspace } from 'coc.nvim'
+import { workspace, window, Uri, TextDocumentContentProvider } from 'coc.nvim'
 import { xhr, configure as configureHttpRequests, getErrorStatusDescription, XHRResponse } from 'request-light'
+import { SchemaExtensionAPI } from './schema-extension-api'
 
 export interface IJSONSchemaCache {
   getETag(schemaUri: string): string | undefined
   putSchema(schemaUri: string, eTag: string, schemaContent: string): Promise<void>
   getSchema(schemaUri: string): Promise<string | undefined>
+}
+
+export class JSONSchemaDocumentContentProvider implements TextDocumentContentProvider {
+  constructor(private readonly schemaCache: IJSONSchemaCache, private readonly schemaApi: SchemaExtensionAPI) {}
+  async provideTextDocumentContent(uri: Uri): Promise<string> {
+    if (uri.fragment) {
+      const origUri = uri.fragment
+      const schemaUri = Uri.parse(origUri)
+      // handle both 'http' and 'https'
+      if (origUri.startsWith('http')) {
+        return getJsonSchemaContent(origUri, this.schemaCache)
+      } else if (this.schemaApi.hasProvider(schemaUri.scheme)) {
+        let content = this.schemaApi.requestCustomSchemaContent(origUri)
+
+        content = await Promise.resolve(content)
+        // prettify JSON
+        if (content.indexOf('\n') === -1) {
+          content = JSON.stringify(JSON.parse(content), null, 2)
+        }
+
+        return content
+      } else {
+        window.showErrorMessage(`Cannot Load content for: ${origUri}. Unknown schema: '${schemaUri.scheme}'`)
+        return null
+      }
+    } else {
+      window.showErrorMessage(`Cannot Load content for: '${uri.toString()}' `)
+      return null
+    }
+  }
 }
 
 export async function getJsonSchemaContent(uri: string, schemaCache: IJSONSchemaCache): Promise<string> {
