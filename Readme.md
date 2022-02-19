@@ -20,9 +20,9 @@ In your vim/neovim, run command:
      - Node has an invalid key node type
      - Node has an invalid type
      - Node is not a valid child node
-2. Document Outlining (<kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>O</kbd>):
+2. Document Outlining (`:CocOutline`):
    - Provides the document outlining of all completed nodes in the file
-3. Auto completion (<kbd>Ctrl</kbd> + <kbd>Space</kbd>):
+3. Auto completion:
    - Auto completes on all commands
    - Scalar nodes autocomplete to schema's defaults if they exist
 4. Hover support:
