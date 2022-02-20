@@ -22,6 +22,11 @@
     "configuration": {
       "type": "object",
       "properties": {
+        "yaml.enable": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable/disable coc-yaml (requires restart)."
+        },
         "yaml.execArgv": {
           "type": "array",
           "default": [],

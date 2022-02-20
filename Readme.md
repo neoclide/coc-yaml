@@ -46,6 +46,8 @@ Default YAML spec version is `1.2`, it can be changed with `yaml.yamlVersion` se
 
 The following settings are supported:
 
+- `yaml.enable`: Enable/disable coc-yaml (requires restart)
+- `yaml.execArgv`: The execArgv option for node running yaml language server.
 - `yaml.yamlVersion`: Set default YAML spec version (`1.2` or `1.1`)
 - `yaml.format.enable`: Enable/disable default YAML formatter (requires restart)
 - `yaml.format.singleQuote`: Use single quotes instead of double quotes

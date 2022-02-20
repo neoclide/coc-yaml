@@ -68,6 +68,8 @@ export function activate(context: ExtensionContext): SchemaExtensionAPI {
   //   path.join('node_modules', 'yaml-language-server', 'out', 'server', 'src', 'server.js')
   // )
   const serverModule = context.asAbsolutePath('./dist/languageserver.js')
+  const config = workspace.getConfiguration('yaml')
+  if (!config.get<boolean>('enable', true)) return
 
   // The debug options for the server
   const debugOptions = { execArgv: ['--nolazy', '--inspect=6009'] }
@@ -75,7 +77,7 @@ export function activate(context: ExtensionContext): SchemaExtensionAPI {
   // If the extension is launched in debug mode then the debug server options are used
   // Otherwise the run options are used
   const serverOptions: ServerOptions = {
-    run: { module: serverModule, transport: TransportKind.ipc },
+    run: { module: serverModule, transport: TransportKind.ipc, options: { execArgv: config.get<string[]>('execArgv', []) } },
     debug: { module: serverModule, transport: TransportKind.ipc, options: debugOptions },
   }
 
