@@ -1,6 +1,6 @@
 {
   "name": "coc-yaml",
-  "version": "1.7.4",
+  "version": "1.7.5",
   "description": "yaml extension for coc.nvim",
   "main": "lib/index.js",
   "publisher": "chemzqm",
