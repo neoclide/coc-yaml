@@ -20,6 +20,7 @@
   "yamlValidation": [],
   "contributes": {
     "configuration": {
+      "title": "YAML",
       "type": "object",
       "properties": {
         "yaml.enable": {
