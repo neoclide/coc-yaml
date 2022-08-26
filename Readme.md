@@ -231,7 +231,7 @@ My_second_project:
 You must then associate schemas relative to the root of the multi root workspace project.
 
 ```json
-yaml.schemas: {
+"yaml.schemas": {
     "My_first_project/my_schema.json": "test.yaml",
     "My_second_project/my_schema2.json": "test2.yaml"
 }
