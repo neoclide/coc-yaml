@@ -3,6 +3,10 @@
   "version": "1.9.0",
   "description": "yaml extension for coc.nvim",
   "main": "lib/index.js",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/neoclide/coc-yaml.git"
+  },
   "publisher": "chemzqm",
   "keywords": [
     "coc.nvim",
