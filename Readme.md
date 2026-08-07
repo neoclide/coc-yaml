@@ -1,5 +1,7 @@
 # coc-yaml
 
+[![CI](https://github.com/neoclide/coc-yaml/actions/workflows/test.yml/badge.svg)](https://github.com/neoclide/coc-yaml/actions/workflows/test.yml)
+
 Fork of [vscode-yaml](https://github.com/redhat-developer/vscode-yaml) that
 works with [coc.nvim](https://github.com/neoclide/coc.nvim)
 

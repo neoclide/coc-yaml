@@ -16,7 +16,14 @@
     "coc": "^0.0.80"
   },
   "scripts": {
-    "prepare": "node esbuild.js"
+    "prepare": "node esbuild.js",
+    "test": "coc-test 'test/**/*.test.ts'"
+  },
+  "coc-test": {
+    "user-settings": {
+      "yaml.enable": true,
+      "yaml.schemaStore.enable": false
+    }
   },
   "activationEvents": [
     "onLanguage:yaml"
@@ -145,12 +152,13 @@
   "license": "MIT",
   "devDependencies": {
     "@chemzqm/tsconfig": "^0.0.3",
-    "@types/node": "16.18",
+    "@types/node": "^20.19.39",
+    "ansi-styles": "^6.1.0",
+    "coc-test": "^0.1.1",
     "coc.nvim": "0.0.83-next.19",
     "esbuild": "^0.25.0",
     "fs-extra": "^10.0.0",
     "request-light": "^0.5.7",
-    "ansi-styles": "^6.1.0",
     "typescript": "^5.7.3"
   },
   "dependencies": {

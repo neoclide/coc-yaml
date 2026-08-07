@@ -118,24 +118,27 @@ export function activate(context: ExtensionContext): SchemaExtensionAPI {
     )
   )
 
+  const logClientError = (e: any): void => {
+    client.outputChannel.appendLine(`yaml client notification failed: ${e}`)
+  }
   client.onReady().then(() => {
     // Send a notification to the server with any YAML schema associations in all extensions
-    client.sendNotification(SchemaAssociationNotification.type, getSchemaAssociations())
+    void client.sendNotification(SchemaAssociationNotification.type, getSchemaAssociations()).catch(logClientError)
 
     // If the extensions change, fire this notification again to pick up on any association changes
     extensions.onDidActiveExtension(() => {
-      client.sendNotification(SchemaAssociationNotification.type, getSchemaAssociations())
+      void client.sendNotification(SchemaAssociationNotification.type, getSchemaAssociations()).catch(logClientError)
     })
     extensions.onDidUnloadExtension(() => {
-      client.sendNotification(SchemaAssociationNotification.type, getSchemaAssociations())
+      void client.sendNotification(SchemaAssociationNotification.type, getSchemaAssociations()).catch(logClientError)
     })
 
     // Tell the server that the client is ready to provide custom schema content
-    client.sendNotification(DynamicCustomSchemaRequestRegistration.type)
+    void client.sendNotification(DynamicCustomSchemaRequestRegistration.type).catch(logClientError)
     // Tell the server that the client supports schema requests sent directly to it
-    client.sendNotification(VSCodeContentRequestRegistration.type)
+    void client.sendNotification(VSCodeContentRequestRegistration.type).catch(logClientError)
     // Tell the server that the client supports schema selection requests
-    client.sendNotification(SchemaSelectionRequests.type)
+    void client.sendNotification(SchemaSelectionRequests.type).catch(logClientError)
     // If the server asks for custom schema content, get it and send it back
     client.onRequest(CUSTOM_SCHEMA_REQUEST, (resource: string) => {
       return schemaExtensionAPI.requestCustomSchema(resource)
@@ -174,6 +177,8 @@ export function activate(context: ExtensionContext): SchemaExtensionAPI {
         }
       }
     })
+  }).catch(e => {
+    client.outputChannel.appendLine(`yaml client failed to become ready: ${e}`)
   })
   return schemaExtensionAPI
 }
