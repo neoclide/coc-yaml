@@ -1,5 +1,6 @@
 import { CancellationToken, IList, LanguageClient, ListAction, ListContext, ListItem, RequestType, workspace } from 'coc.nvim'
 import { JSONSchema } from './status-item'
+import { associateSchemaWithFile, removeFileFromSchemas } from './schema-config'
 import style from 'ansi-styles'
 
 interface MatchingJSONSchema extends JSONSchema {
@@ -28,7 +29,11 @@ export default class SchemaList implements IList {
     this.actions.push({
       name: 'choose',
       execute: (item) => {
-        let { uri, schema } = (Array.isArray(item) ? item[0] : item).data
+        const { uri, schema } = (Array.isArray(item) ? item[0] : item).data
+        if (!schema) {
+          clearSchemaForFile(uri)
+          return
+        }
         this.update(uri, schema)
       },
       multiple: false
@@ -36,21 +41,9 @@ export default class SchemaList implements IList {
   }
 
   private update(fileUri: string, schema: JSONSchema): void {
-    const settings: Record<string, unknown> = workspace.getConfiguration('yaml').get('schemas')
-    const newSettings = Object.assign({}, settings)
-    deleteExistingFilePattern(newSettings, fileUri)
-    const schemaURI = schema.uri
-    const schemaSettings = newSettings[schemaURI]
-    if (schemaSettings) {
-      if (Array.isArray(schemaSettings)) {
-        (schemaSettings as Array<string>).push(fileUri)
-      } else if (typeof schemaSettings === 'string') {
-        newSettings[schemaURI] = [schemaSettings, fileUri]
-      }
-    } else {
-      newSettings[schemaURI] = fileUri
-    }
-    workspace.getConfiguration('yaml').update('schemas', newSettings)
+    const settings: Record<string, unknown> = workspace.getConfiguration('yaml').get('schemas') ?? {}
+    const newSettings = associateSchemaWithFile(settings, schema.uri, fileUri)
+    void workspace.getConfiguration('yaml').update('schemas', newSettings)
   }
 
   public async loadItems(context: ListContext, token: CancellationToken): Promise<ListItem[]> {
@@ -92,22 +85,19 @@ export default class SchemaList implements IList {
       }
       return a.label.localeCompare(b.label)
     })
+    items.push({
+      label: gray('No schema (disable for current file)'),
+      data: {
+        schema: null,
+        uri: doc.uri
+      }
+    })
     return items
   }
 }
 
-function deleteExistingFilePattern(settings: Record<string, unknown>, fileUri: string): unknown {
-  for (const key in settings) {
-    if (Object.prototype.hasOwnProperty.call(settings, key)) {
-      const element = settings[key]
-      if (Array.isArray(element)) {
-        const filePatterns = element.filter((val) => val !== fileUri)
-        settings[key] = filePatterns
-      }
-      if (element === fileUri) {
-        delete settings[key]
-      }
-    }
-  }
-  return settings
+function clearSchemaForFile(fileUri: string): void {
+  const settings: Record<string, unknown> = workspace.getConfiguration('yaml').get('schemas') ?? {}
+  const newSettings = removeFileFromSchemas(settings, fileUri)
+  void workspace.getConfiguration('yaml').update('schemas', newSettings)
 }

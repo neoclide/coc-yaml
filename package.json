@@ -124,6 +124,14 @@
           "default": "https://www.schemastore.org/api/json/catalog.json",
           "description": "URL of schema store catalog to use"
         },
+        "yaml.disabledPatterns": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "description": "Glob patterns of files for which the yaml language server is disabled, '!' prefixed patterns exclude files from an earlier pattern."
+        },
         "yaml.disableAdditionalProperties": {
           "type": "boolean",
           "default": false,
@@ -149,6 +157,10 @@
       {
         "command": "yaml.jumpToSchema",
         "title": "Open the schema for the current file"
+      },
+      {
+        "command": "yaml.loadSchema",
+        "title": "Associate a schema file path with the current file"
       }
     ]
   },

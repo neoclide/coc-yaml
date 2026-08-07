@@ -18,6 +18,7 @@ describe('coc-yaml extension', () => {
   it('registers yaml commands', () => {
     assert.equal(commands.has('yaml.selectSchema'), true)
     assert.equal(commands.has('yaml.jumpToSchema'), true)
+    assert.equal(commands.has('yaml.loadSchema'), true)
   })
 
   it('registers the yaml language service', () => {
@@ -71,6 +72,68 @@ describe('coc-yaml extension', () => {
       const schemaDoc = await opened
       assert.ok(schemaDoc.getText().includes('"type"'))
     } finally {
+      fs.rmSync(dir, { recursive: true, force: true })
+    }
+  })
+
+  it('associates a schema file with the current yaml document', async () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'coc-yaml-schema-'))
+    const schemaFile = path.join(dir, 'schema.json')
+    const yamlFile = path.join(dir, 'deploy.yaml')
+    const schemaUri = Uri.file(schemaFile).toString()
+    fs.writeFileSync(schemaFile, '{"type":"object","properties":{"version":{"type":"string"}}}\n')
+    fs.writeFileSync(yamlFile, 'version: v1.0\n')
+    try {
+      const service = services.getService('yaml')
+      assert.ok(service.client)
+      await waitForClientStarted(service.client)
+      await workspace.nvim.command(`edit ${yamlFile}`)
+      const doc = await waitForCurrentDocument()
+      await workspace.nvim.command('setf yaml')
+      await waitForDocumentLanguageId(doc, 'yaml')
+      await waitForAttached(doc)
+
+      await commands.executeCommand('yaml.loadSchema', schemaFile)
+      assert.deepEqual(workspace.getConfiguration('yaml').get('schemas'), { [schemaUri]: doc.uri })
+
+      const resolved = await waitForSchema(service.client, doc.uri)
+      assert.equal((resolved[0] as { uri: string }).uri, schemaUri)
+    } finally {
+      await workspace.getConfiguration('yaml').update('schemas', {})
+      fs.rmSync(dir, { recursive: true, force: true })
+    }
+  })
+
+  it('disables the yaml language server for configured patterns', async () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'coc-yaml-disabled-'))
+    const schemaFile = path.join(dir, 'schema.json')
+    const enabledFile = path.join(dir, 'enabled.yaml')
+    const disabledFile = path.join(dir, 'disabled.yaml')
+    const schemaUri = Uri.file(schemaFile).toString()
+    fs.writeFileSync(schemaFile, '{"type":"object","properties":{"version":{"type":"string"}}}\n')
+    fs.writeFileSync(enabledFile, `# yaml-language-server: $schema=${schemaUri}\nversion: v1.0\n`)
+    fs.writeFileSync(disabledFile, `# yaml-language-server: $schema=${schemaUri}\nversion: v1.0\n`)
+    try {
+      const service = services.getService('yaml')
+      assert.ok(service.client)
+      await waitForClientStarted(service.client)
+      await workspace.getConfiguration('yaml').update('disabledPatterns', ['**/disabled.yaml'])
+
+      await workspace.nvim.command(`edit ${disabledFile}`)
+      let doc = await waitForCurrentDocument()
+      await workspace.nvim.command('setf yaml')
+      await waitForDocumentLanguageId(doc, 'yaml')
+      const disabledSchemas = await service.client.sendRequest('yaml/get/jsonSchema', doc.uri)
+      assert.deepEqual(disabledSchemas, [])
+
+      await workspace.nvim.command(`edit ${enabledFile}`)
+      doc = await waitForCurrentDocument()
+      await workspace.nvim.command('setf yaml')
+      await waitForDocumentLanguageId(doc, 'yaml')
+      const resolved = await waitForSchema(service.client, doc.uri)
+      assert.equal((resolved[0] as { uri: string }).uri, schemaUri)
+    } finally {
+      await workspace.getConfiguration('yaml').update('disabledPatterns', [])
       fs.rmSync(dir, { recursive: true, force: true })
     }
   })

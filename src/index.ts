@@ -4,16 +4,19 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-import { workspace, listManager, services, window, NotificationType, RequestType, ExtensionContext, Uri, TransportKind, extensions, LanguageClient, LanguageClientOptions, ServerOptions, RevealOutputChannelOn, commands } from 'coc.nvim'
+import { workspace, listManager, services, window, NotificationType, RequestType, ExtensionContext, Uri, TransportKind, extensions, LanguageClient, LanguageClientOptions, ServerOptions, RevealOutputChannelOn, commands, type LinesTextDocument } from 'coc.nvim'
 import { CUSTOM_SCHEMA_REQUEST, CUSTOM_CONTENT_REQUEST, SchemaExtensionAPI } from './schema-extension-api'
 import { joinPath } from './paths'
 import StatusItem from './status-item'
 import { JSONSchemaCache } from './schema-cache'
 import { JSONSchemaDocumentContentProvider, getJsonSchemaContent } from './content-provider'
 import { jumpToSchema } from './jump-to-schema'
+import { associateSchemaWithFile } from './schema-config'
+import { isDisabledByPatterns } from './disabled-patterns'
 import SchemaList from './list'
 import { promisify } from 'util'
 import fs from 'fs'
+import path from 'path'
 
 export interface ISchemaAssociations {
   [pattern: string]: string[]
@@ -92,6 +95,21 @@ export function activate(context: ExtensionContext): SchemaExtensionAPI {
       fileEvents: [workspace.createFileSystemWatcher('**/*.?(e)y?(a)ml'), workspace.createFileSystemWatcher('**/*.json')],
     },
     revealOutputChannelOn: RevealOutputChannelOn.Never,
+    middleware: {
+      didOpen: async (document, next) => {
+        if (isYamlDisabled(document)) return
+        await next(document)
+      },
+      didChange: async (event, next) => {
+        const document = (event as unknown as { document: LinesTextDocument }).document
+        if (isYamlDisabled(document)) return
+        await next(event)
+      },
+      didClose: async (document, next) => {
+        if (isYamlDisabled(document)) return
+        await next(document)
+      },
+    },
   }
 
   // Create the language client and start it
@@ -113,6 +131,24 @@ export function activate(context: ExtensionContext): SchemaExtensionAPI {
     void jumpToSchema(client, doc.uri).catch(e => {
       client.outputChannel.appendLine(`yaml.jumpToSchema failed: ${e}`)
     })
+  }))
+  context.subscriptions.push(commands.registerCommand('yaml.loadSchema', async (schemaPath?: string) => {
+    const doc = workspace.getDocument(workspace.bufnr)
+    if (!doc || !doc.attached || doc.languageId !== 'yaml') {
+      window.showErrorMessage('current buffer is not a yaml document')
+      return
+    }
+    let input = schemaPath
+    if (typeof input !== 'string' || input.length === 0) {
+      input = await window.requestInput('Schema file path or url')
+    }
+    if (!input || input.length === 0) return
+    const schemaUri = resolveSchemaUri(input)
+    if (!schemaUri) return
+    const settings: Record<string, unknown> = workspace.getConfiguration('yaml').get('schemas') ?? {}
+    const next = associateSchemaWithFile(settings, schemaUri, doc.uri)
+    await workspace.getConfiguration('yaml').update('schemas', next)
+    window.showInformationMessage(`Schema ${schemaUri} associated with current file`)
   }))
   const schemaCache = new JSONSchemaCache(context.storagePath, context.globalState, msg => {
     client.outputChannel.appendLine(msg)
@@ -189,6 +225,23 @@ export function activate(context: ExtensionContext): SchemaExtensionAPI {
     client.outputChannel.appendLine(`yaml client failed to become ready: ${e}`)
   })
   return schemaExtensionAPI
+}
+
+function isYamlDisabled(document: LinesTextDocument): boolean {
+  const patterns = workspace.getConfiguration('yaml').get<string[]>('disabledPatterns', [])
+  return patterns.length > 0 && isDisabledByPatterns(patterns, document)
+}
+
+function resolveSchemaUri(input: string): string | undefined {
+  if (/^[a-z][a-z0-9+.-]*:\/\//i.test(input) || input.startsWith('file:')) {
+    return input
+  }
+  const filePath = path.isAbsolute(input) ? input : path.resolve(workspace.cwd, input)
+  if (!fs.existsSync(filePath)) {
+    window.showErrorMessage(`Schema file not found: ${filePath}`)
+    return undefined
+  }
+  return Uri.file(filePath).toString()
 }
 
 function getSchemaAssociations(): ISchemaAssociation[] {
