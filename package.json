@@ -145,6 +145,10 @@
       {
         "command": "yaml.selectSchema",
         "title": "Choose yaml schema for current file, update configuration in user's coc-settings.json"
+      },
+      {
+        "command": "yaml.jumpToSchema",
+        "title": "Open the schema for the current file"
       }
     ]
   },

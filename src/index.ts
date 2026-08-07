@@ -10,6 +10,7 @@ import { joinPath } from './paths'
 import StatusItem from './status-item'
 import { JSONSchemaCache } from './schema-cache'
 import { JSONSchemaDocumentContentProvider, getJsonSchemaContent } from './content-provider'
+import { jumpToSchema } from './jump-to-schema'
 import SchemaList from './list'
 import { promisify } from 'util'
 import fs from 'fs'
@@ -105,6 +106,13 @@ export function activate(context: ExtensionContext): SchemaExtensionAPI {
   context.subscriptions.push(listManager.registerList(new SchemaList(client)))
   context.subscriptions.push(commands.registerCommand('yaml.selectSchema', () => {
     workspace.nvim.command(`CocList yamlschemas`, true)
+  }))
+  context.subscriptions.push(commands.registerCommand('yaml.jumpToSchema', () => {
+    const doc = workspace.getDocument(workspace.bufnr)
+    if (!doc || !doc.attached) return
+    void jumpToSchema(client, doc.uri).catch(e => {
+      client.outputChannel.appendLine(`yaml.jumpToSchema failed: ${e}`)
+    })
   }))
   const schemaCache = new JSONSchemaCache(context.storagePath, context.globalState, msg => {
     client.outputChannel.appendLine(msg)
