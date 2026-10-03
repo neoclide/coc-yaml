@@ -1,5 +1,6 @@
 import { workspace, window, Uri, TextDocumentContentProvider, ResponseError } from 'coc.nvim'
-import { xhr, configure as configureHttpRequests, getErrorStatusDescription, XHRResponse } from 'request-light'
+import { configure as configureHttpRequests, getErrorStatusDescription, XHRResponse } from 'request-light'
+import { requestSchema } from './schema-request'
 import { requestWithRetry } from './schema-request-retry'
 import { SchemaExtensionAPI } from './schema-extension-api'
 
@@ -49,7 +50,7 @@ export async function getJsonSchemaContent(uri: string, schemaCache: IJSONSchema
   if (cachedETag) {
     headers['If-None-Match'] = cachedETag
   }
-  return requestWithRetry(() => xhr({ url: uri, followRedirects: 5, headers }))
+  return requestWithRetry(() => requestSchema({ url: uri, followRedirects: 5, headers }))
     .then(async (response) => {
       // cache only if server supports 'etag' header
       const etag = response.headers['etag']
@@ -69,7 +70,7 @@ export async function getJsonSchemaContent(uri: string, schemaCache: IJSONSchema
         if (content === undefined) {
           console.error(`Cannot read cached content for: ${uri}, trying to load again`)
           delete headers['If-None-Match']
-          return requestWithRetry(() => xhr({ url: uri, followRedirects: 5, headers }))
+          return requestWithRetry(() => requestSchema({ url: uri, followRedirects: 5, headers }))
             .then((response) => {
               return response.responseText
             })

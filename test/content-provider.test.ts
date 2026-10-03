@@ -21,6 +21,16 @@ describe('remote schema content', () => {
         res.writeHead(503, { 'retry-after': '0' }).end('temporary')
       } else if (req.url === '/retry') {
         res.writeHead(200).end('{"type":"object"}')
+      } else if (req.url === '/reset' && ++attempts < 3) {
+        req.socket.destroy()
+      } else if (req.url === '/reset') {
+        res.writeHead(200).end('{}')
+      } else if (req.url === '/missing-cache' && req.headers['if-none-match']) {
+        res.writeHead(304).end()
+      } else if (req.url === '/missing-cache' && ++attempts < 3) {
+        req.socket.destroy()
+      } else if (req.url === '/missing-cache') {
+        res.writeHead(200).end('{}')
       } else if (req.url === '/cached') {
         res.writeHead(304).end()
       } else {
@@ -45,6 +55,13 @@ describe('remote schema content', () => {
       assert.equal(error.message, 'missing schema')
       return true
     })
+  })
+  it('retries connection resets in the content provider and after a missing cached 304', async () => {
+    for (const path of ['/reset', '/missing-cache']) {
+      attempts = 0
+      assert.equal(await getJsonSchemaContent(`${base}${path}`, cache()), '{}')
+      assert.equal(attempts, 3)
+    }
   })
   it('preserves cached content for 304 and an empty cached response on failure', async () => {
     assert.equal(await getJsonSchemaContent(`${base}/cached`, cache('{}')), '{}')
