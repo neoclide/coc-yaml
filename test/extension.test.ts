@@ -104,6 +104,72 @@ describe('coc-yaml extension', () => {
     }
   })
 
+  it('keeps workspace schema associations out of user settings when loading a schema', async () => {
+    const dir = fs.mkdtempSync(path.join(process.cwd(), '.coc-yaml-schema-scope-'))
+    const schemaFile = path.join(dir, 'schema.json')
+    const yamlFile = path.join(dir, 'deploy.yaml')
+    const schemaUri = Uri.file(schemaFile).toString()
+    const fileUri = Uri.file(yamlFile).toString()
+    const globalSchema = Uri.file(path.join(dir, 'global.json')).toString()
+    const previousSchema = Uri.file(path.join(dir, 'previous.json')).toString()
+    const workspaceSchema = Uri.file(path.join(dir, 'workspace.json')).toString()
+    const sharedSchema = Uri.file(path.join(dir, 'shared.json')).toString()
+    const globalSettings = {
+      [globalSchema]: '**/global.yaml',
+      [previousSchema]: [fileUri, '**/retained.yaml'],
+      [sharedSchema]: '**/global-shared.yaml',
+    }
+    const workspaceSettings = {
+      [workspaceSchema]: '**/workspace.yaml',
+      [sharedSchema]: '**/workspace-shared.yaml',
+    }
+    const workspaceConfigFile = path.join(dir, '.vim', 'coc-settings.json')
+    const workspaceConfigContent = JSON.stringify({ 'yaml.schemas': workspaceSettings }) + '\n'
+    const originalCwd = workspace.cwd
+    const originalGlobal = workspace.getConfiguration('yaml').inspect('schemas')?.globalValue
+    assert.ok(process.env.COC_VIMCONFIG)
+    const userConfigFile = path.join(process.env.COC_VIMCONFIG, 'coc-settings.json')
+    fs.mkdirSync(path.dirname(workspaceConfigFile))
+    fs.mkdirSync(path.join(dir, '.git'))
+    fs.writeFileSync(workspaceConfigFile, workspaceConfigContent)
+    fs.writeFileSync(schemaFile, '{"type":"object"}\n')
+    fs.writeFileSync(yamlFile, 'version: v1.0\n')
+    try {
+      await workspace.getConfiguration('yaml').update('schemas', globalSettings, true)
+      await workspace.nvim.command(`cd ${dir}`)
+      await workspace.nvim.command(`edit ${yamlFile}`)
+      const doc = await waitForCurrentDocument()
+      await workspace.nvim.command('setf yaml')
+      await waitForDocumentLanguageId(doc, 'yaml')
+      await waitForAttached(doc)
+      assert.equal(doc.uri, fileUri)
+      assert.deepEqual(workspace.getConfiguration('yaml').get('schemas'), {
+        ...globalSettings,
+        ...workspaceSettings,
+      })
+
+      await commands.executeCommand('yaml.loadSchema', schemaFile)
+
+      const expectedGlobal = {
+        ...globalSettings,
+        [previousSchema]: ['**/retained.yaml'],
+        [schemaUri]: fileUri,
+      }
+      const config = workspace.getConfiguration('yaml')
+      // Clone arrays created in the extension's VM before comparing prototypes.
+      assert.deepEqual(structuredClone(config.inspect('schemas')?.globalValue), expectedGlobal)
+      assert.deepEqual(JSON.parse(fs.readFileSync(userConfigFile, 'utf8'))['yaml.schemas'], expectedGlobal)
+      assert.deepEqual(config.inspect('schemas')?.workspaceFolderValue, workspaceSettings)
+      assert.deepEqual(structuredClone(config.get('schemas')), { ...expectedGlobal, ...workspaceSettings })
+      assert.equal(fs.readFileSync(workspaceConfigFile, 'utf8'), workspaceConfigContent)
+    } finally {
+      await workspace.getConfiguration('yaml').update('schemas', originalGlobal, true)
+      await workspace.nvim.command('enew!')
+      await workspace.nvim.command(`cd ${originalCwd}`)
+      fs.rmSync(dir, { recursive: true, force: true })
+    }
+  })
+
   it('disables the yaml language server for configured patterns', async () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'coc-yaml-disabled-'))
     const schemaFile = path.join(dir, 'schema.json')

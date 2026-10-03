@@ -145,9 +145,10 @@ export function activate(context: ExtensionContext): SchemaExtensionAPI {
     if (!input || input.length === 0) return
     const schemaUri = resolveSchemaUri(input)
     if (!schemaUri) return
-    const settings: Record<string, unknown> = workspace.getConfiguration('yaml').get('schemas') ?? {}
+    const schemaConfig = workspace.getConfiguration('yaml')
+    const settings = schemaConfig.inspect<Record<string, unknown>>('schemas')?.globalValue ?? {}
     const next = associateSchemaWithFile(settings, schemaUri, doc.uri)
-    await workspace.getConfiguration('yaml').update('schemas', next, true)
+    await schemaConfig.update('schemas', next, true)
     window.showInformationMessage(`Schema ${schemaUri} associated with current file`)
   }))
   const schemaCache = new JSONSchemaCache(context.storagePath, context.globalState, msg => {
