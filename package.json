@@ -17,7 +17,9 @@
   },
   "scripts": {
     "prepare": "node esbuild.js",
-    "test": "coc-test 'test/**/*.test.ts'"
+    "test": "coc-test 'test/**/*.test.ts'",
+    "build": "node esbuild.js",
+    "lint": "tsc --noEmit"
   },
   "coc-test": {
     "user-settings": {
@@ -168,18 +170,19 @@
   "license": "MIT",
   "devDependencies": {
     "@chemzqm/tsconfig": "^0.0.3",
-    "@types/node": "^20.19.39",
+    "@types/node": "^20.19.43",
     "ansi-styles": "^6.1.0",
-    "coc-test": "^0.1.2",
-    "coc.nvim": "0.0.83-next.25",
-    "esbuild": "^0.25.0",
+    "coc-test": "^0.2.0",
+    "coc.nvim": "^0.0.83-next.25",
+    "esbuild": "^0.28.2",
     "fs-extra": "^10.0.0",
     "http-proxy-agent": "^5.0.0",
     "https-proxy-agent": "^5.0.1",
     "request-light": "^0.5.7",
-    "typescript": "^5.7.3"
+    "typescript": "6.0.3"
   },
   "dependencies": {
     "prettier": "2.0.5"
-  }
+  },
+  "packageManager": "npm@11.9.0"
 }

@@ -83,7 +83,7 @@ export class JSONSchemaCache implements IJSONSchemaCache {
       await this.memento.update(CACHE_KEY, this.cache)
     } catch (err) {
       delete this.cache[schemaUri]
-      this.log(err)
+      this.log(String(err))
     }
   }
 
