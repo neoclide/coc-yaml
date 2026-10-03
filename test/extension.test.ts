@@ -99,7 +99,7 @@ describe('coc-yaml extension', () => {
       const resolved = await waitForSchema(service.client, doc.uri)
       assert.equal((resolved[0] as { uri: string }).uri, schemaUri)
     } finally {
-      await workspace.getConfiguration('yaml').update('schemas', {})
+      await workspace.getConfiguration('yaml').update('schemas', {}, true)
       fs.rmSync(dir, { recursive: true, force: true })
     }
   })
@@ -117,7 +117,7 @@ describe('coc-yaml extension', () => {
       const service = services.getService('yaml')
       assert.ok(service.client)
       await waitForClientStarted(service.client)
-      await workspace.getConfiguration('yaml').update('disabledPatterns', ['**/disabled.yaml'])
+      await workspace.getConfiguration('yaml').update('disabledPatterns', ['**/disabled.yaml'], true)
 
       await workspace.nvim.command(`edit ${disabledFile}`)
       let doc = await waitForCurrentDocument()
@@ -133,7 +133,7 @@ describe('coc-yaml extension', () => {
       const resolved = await waitForSchema(service.client, doc.uri)
       assert.equal((resolved[0] as { uri: string }).uri, schemaUri)
     } finally {
-      await workspace.getConfiguration('yaml').update('disabledPatterns', [])
+      await workspace.getConfiguration('yaml').update('disabledPatterns', [], true)
       fs.rmSync(dir, { recursive: true, force: true })
     }
   })

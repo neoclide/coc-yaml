@@ -1,4 +1,4 @@
-import { workspace, disposeAll, RequestType, events, Document, StatusBarItem, window, LanguageClient, Disposable, ExtensionContext } from 'coc.nvim'
+import { workspace, disposeAll, RequestType, events, Document, StatusBarItem, window, LanguageClient, Disposable } from 'coc.nvim'
 
 type FileUri = string
 export interface JSONSchema {

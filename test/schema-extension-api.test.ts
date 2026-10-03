@@ -28,6 +28,13 @@ describe('SchemaExtensionAPI', () => {
     assert.deepEqual(api.requestCustomSchema('file:///a.yaml'), [])
   })
 
+  it('continues after a contributor throws', () => {
+    const { api } = createApi()
+    api.registerContributor('broken', () => { throw new Error('broken contributor') }, () => '{}')
+    api.registerContributor('working', () => 'working://schema', () => '{}')
+    assert.deepEqual(api.requestCustomSchema('file:///a.yaml'), ['working://schema'])
+  })
+
   it('provides custom schema content by uri scheme', () => {
     const { api } = createApi()
     api.registerContributor('demo', () => 'demo://schema', uri => `content:${uri}`)

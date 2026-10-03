@@ -1,3 +1,9 @@
+## Unreleased
+
+- Retry temporary remote schema failures and return standard protocol errors when schema loading fails.
+- Preserve empty schema cache entries and handle stale cache metadata correctly.
+- Keep schema contributor failures isolated and persist loaded schemas in user configuration.
+
 # 1.7.1
 
 - And `yaml.selectSchema` command.

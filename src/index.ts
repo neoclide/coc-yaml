@@ -147,7 +147,7 @@ export function activate(context: ExtensionContext): SchemaExtensionAPI {
     if (!schemaUri) return
     const settings: Record<string, unknown> = workspace.getConfiguration('yaml').get('schemas') ?? {}
     const next = associateSchemaWithFile(settings, schemaUri, doc.uri)
-    await workspace.getConfiguration('yaml').update('schemas', next)
+    await workspace.getConfiguration('yaml').update('schemas', next, true)
     window.showInformationMessage(`Schema ${schemaUri} associated with current file`)
   }))
   const schemaCache = new JSONSchemaCache(context.storagePath, context.globalState, msg => {
