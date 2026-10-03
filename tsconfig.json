@@ -6,8 +6,8 @@
     "declaration": false,
     "outDir": "lib",
     "target": "es2017",
-    "module": "commonjs",
-    "moduleResolution": "node",
+    "module": "ES2022",
+    "moduleResolution": "bundler",
     "lib": ["es2018"],
     "plugins": []
   },
