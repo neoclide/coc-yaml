@@ -8,7 +8,7 @@ export function removeFileFromSchemas(settings: SchemaSettings, fileUri: string)
   const next = Object.assign({}, settings)
   for (const key of Object.keys(next)) {
     const value = next[key]
-    if (Array.isArray(value)) {
+    if (Array.isArray(value) && value.includes(fileUri)) {
       const filtered = value.filter(v => v !== fileUri)
       if (filtered.length === 0) delete next[key]
       else next[key] = filtered

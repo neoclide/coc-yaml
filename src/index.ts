@@ -11,7 +11,7 @@ import StatusItem from './status-item'
 import { JSONSchemaCache } from './schema-cache'
 import { JSONSchemaDocumentContentProvider, getJsonSchemaContent } from './content-provider'
 import { jumpToSchema } from './jump-to-schema'
-import { associateSchemaWithFile } from './schema-config'
+import { associateSchemaWithFile, removeFileFromSchemas } from './schema-config'
 import { isDisabledByPatterns } from './disabled-patterns'
 import SchemaList from './list'
 import { promisify } from 'util'
@@ -145,10 +145,26 @@ export function activate(context: ExtensionContext): SchemaExtensionAPI {
     if (!input || input.length === 0) return
     const schemaUri = resolveSchemaUri(input)
     if (!schemaUri) return
-    const schemaConfig = workspace.getConfiguration('yaml')
-    const settings = schemaConfig.inspect<Record<string, unknown>>('schemas')?.globalValue ?? {}
+    const schemaConfig = workspace.getConfiguration('yaml', doc.uri)
+    const scopes = schemaConfig.inspect<Record<string, unknown>>('schemas')
+    const settings = scopes?.globalValue ?? {}
     const next = associateSchemaWithFile(settings, schemaUri, doc.uri)
     await schemaConfig.update('schemas', next, true)
+    const folderSettings = scopes?.workspaceFolderValue
+    if (folderSettings) {
+      const nextFolder = Object.prototype.hasOwnProperty.call(folderSettings, schemaUri)
+        ? associateSchemaWithFile(folderSettings, schemaUri, doc.uri)
+        : removeFileFromSchemas(folderSettings, doc.uri)
+      for (const key of Object.keys(folderSettings)) {
+        if (!Object.prototype.hasOwnProperty.call(nextFolder, key) && Object.prototype.hasOwnProperty.call(next, key)) {
+          // Keep an emptied override from exposing this schema's global patterns.
+          nextFolder[key] = []
+        }
+      }
+      if (JSON.stringify(nextFolder) !== JSON.stringify(folderSettings)) {
+        await schemaConfig.update('schemas', nextFolder, false)
+      }
+    }
     window.showInformationMessage(`Schema ${schemaUri} associated with current file`)
   }))
   const schemaCache = new JSONSchemaCache(context.storagePath, context.globalState, msg => {

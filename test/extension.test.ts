@@ -170,6 +170,89 @@ describe('coc-yaml extension', () => {
     }
   })
 
+  for (const association of ['selected', 'previous', 'previous fallback'] as const) {
+    it(`reconciles the ${association} workspace schema when loading a schema`, async () => {
+      const dir = fs.mkdtempSync(path.join(process.cwd(), '.coc-yaml-schema-override-'))
+      const schemaFile = path.join(dir, 'schema.json')
+      const yamlFile = path.join(dir, 'deploy.yaml')
+      const schemaUri = Uri.file(schemaFile).toString()
+      const fileUri = Uri.file(yamlFile).toString()
+      const previousSchema = Uri.file(path.join(dir, 'previous.json')).toString()
+      const unrelatedSchema = Uri.file(path.join(dir, 'unrelated.json')).toString()
+      const maskedSchema = Uri.file(path.join(dir, 'masked.json')).toString()
+      const globalSettings = {
+        [schemaUri]: '**/global-selected.yaml',
+        [previousSchema]: association === 'previous fallback' ? [fileUri, '**/*.yaml'] : fileUri,
+        [unrelatedSchema]: '**/global-unrelated.yaml',
+        [maskedSchema]: '**/*.yaml',
+      }
+      const workspaceSettings = {
+        [unrelatedSchema]: '**/workspace-unrelated.yaml',
+        [maskedSchema]: [],
+        ...(association === 'selected'
+          ? { [schemaUri]: '**/workspace-selected.yaml' }
+          : { [previousSchema]: fileUri }),
+      }
+      const workspaceConfig = { 'yaml.schemas': workspaceSettings, 'yaml.customTags': ['!project scalar'] }
+      const workspaceConfigFile = path.join(dir, '.vim', 'coc-settings.json')
+      const originalCwd = workspace.cwd
+      const originalGlobal = workspace.getConfiguration('yaml').inspect('schemas')?.globalValue
+      assert.ok(process.env.COC_VIMCONFIG)
+      const userConfigFile = path.join(process.env.COC_VIMCONFIG, 'coc-settings.json')
+      fs.mkdirSync(path.dirname(workspaceConfigFile))
+      fs.mkdirSync(path.join(dir, '.git'))
+      fs.writeFileSync(workspaceConfigFile, JSON.stringify(workspaceConfig))
+      fs.writeFileSync(schemaFile, '{"type":"object"}\n')
+      fs.writeFileSync(Uri.parse(previousSchema).fsPath, '{"type":"object"}\n')
+      fs.writeFileSync(yamlFile, 'version: v1.0\n')
+      try {
+        const service = services.getService('yaml')
+        await workspace.getConfiguration('yaml').update('schemas', globalSettings, true)
+        await workspace.nvim.command(`cd ${dir}`)
+        await workspace.nvim.command(`edit ${yamlFile}`)
+        const doc = await waitForCurrentDocument()
+        await workspace.nvim.command('setf yaml')
+        await waitForDocumentLanguageId(doc, 'yaml')
+        await waitForAttached(doc)
+        await waitForClientStarted(service.client)
+        assert.equal(doc.uri, fileUri)
+        assert.deepEqual(workspace.getConfiguration('yaml', doc.uri).get('schemas'), {
+          ...globalSettings,
+          ...workspaceSettings,
+        })
+
+        await commands.executeCommand('yaml.loadSchema', schemaFile)
+
+        const expectedGlobal = {
+          [schemaUri]: ['**/global-selected.yaml', fileUri],
+          ...(association === 'previous fallback' ? { [previousSchema]: ['**/*.yaml'] } : {}),
+          [unrelatedSchema]: '**/global-unrelated.yaml',
+          [maskedSchema]: '**/*.yaml',
+        }
+        const expectedWorkspace = {
+          [unrelatedSchema]: '**/workspace-unrelated.yaml',
+          [maskedSchema]: [],
+          ...(association === 'selected' ? { [schemaUri]: ['**/workspace-selected.yaml', fileUri] } : {}),
+          ...(association === 'previous fallback' ? { [previousSchema]: [] } : {}),
+        }
+        const resolved = await waitForSelectedSchema(service.client, doc.uri, schemaUri)
+        assert.deepEqual(resolved.map(schema => schema.uri), [schemaUri])
+        const config = workspace.getConfiguration('yaml', doc.uri)
+        assert.deepEqual(structuredClone(config.get('schemas')), { ...expectedGlobal, ...expectedWorkspace })
+        assert.deepEqual(JSON.parse(fs.readFileSync(userConfigFile, 'utf8'))['yaml.schemas'], expectedGlobal)
+        assert.deepEqual(JSON.parse(fs.readFileSync(workspaceConfigFile, 'utf8')), {
+          ...workspaceConfig,
+          'yaml.schemas': expectedWorkspace,
+        })
+      } finally {
+        await workspace.getConfiguration('yaml').update('schemas', originalGlobal, true)
+        await workspace.nvim.command('enew!')
+        await workspace.nvim.command(`cd ${originalCwd}`)
+        fs.rmSync(dir, { recursive: true, force: true })
+      }
+    })
+  }
+
   it('disables the yaml language server for configured patterns', async () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'coc-yaml-disabled-'))
     const schemaFile = path.join(dir, 'schema.json')
@@ -289,6 +372,20 @@ function waitForSchema(
     }
     void check()
   })
+}
+
+async function waitForSelectedSchema(
+  client: { sendRequest(method: string, params?: unknown): Promise<unknown> },
+  docUri: string,
+  schemaUri: string
+): Promise<{ uri: string }[]> {
+  const deadline = Date.now() + 15000
+  while (Date.now() < deadline) {
+    const schemas = await client.sendRequest('yaml/get/jsonSchema', docUri) as { uri: string }[]
+    if (schemas.some(schema => schema.uri === schemaUri)) return schemas
+    await new Promise(resolve => setTimeout(resolve, 50))
+  }
+  throw new Error('selected schema did not resolve in time')
 }
 
 function waitForDocumentUri(uri: string, timeoutMs = 15000): Promise<LinesTextDocument> {

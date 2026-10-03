@@ -40,4 +40,10 @@ describe('schema config helpers', () => {
       'file:///c.json': 'file:///z.yaml',
     })
   })
+
+  it('preserves unrelated empty arrays that mask lower-scope associations', () => {
+    const settings = { 'file:///masked.json': [], 'file:///old.json': 'file:///a.yaml' }
+    assert.deepEqual(removeFileFromSchemas(settings, 'file:///a.yaml'), { 'file:///masked.json': [] })
+    assert.deepEqual(settings, { 'file:///masked.json': [], 'file:///old.json': 'file:///a.yaml' })
+  })
 })
