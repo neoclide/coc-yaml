@@ -1,5 +1,7 @@
 import assert from 'node:assert/strict'
 import http from 'node:http'
+import https from 'node:https'
+import net from 'node:net'
 import { once } from 'node:events'
 import { after, before, describe, it } from 'node:test'
 import { xhr, type XHROptions } from 'request-light'
@@ -87,6 +89,32 @@ describe('request-light network error adapter', () => {
       return true
     })
     assert.equal(attempts, 3)
+  })
+
+  it('retries resets during a real TLS handshake', async () => {
+    let connections = 0
+    const peer = net.createServer(socket => { connections++; socket.destroy() })
+    peer.listen(0, '127.0.0.1')
+    await once(peer, 'listening')
+    const opts: XHROptions = {
+      url: `https://127.0.0.1:${(peer.address() as any).port}/schema`,
+      agent: new https.Agent({ keepAlive: false }) as XHROptions['agent'],
+    }
+    try {
+      await assert.rejects(xhr(opts), error => {
+        assert.equal((error as any).code, undefined)
+        assert.match((error as any).responseText, /Client network socket disconnected before secure TLS connection was established/)
+        return true
+      })
+      connections = 0
+      await assert.rejects(requestWithRetry(() => requestSchema(opts), noDelay), error => {
+        assert.equal((error as any).code, 'ECONNRESET')
+        return true
+      })
+      assert.equal(connections, 3)
+    } finally {
+      await new Promise<void>((resolve, reject) => peer.close(error => error ? reject(error) : resolve()))
+    }
   })
 
   it('does not retry actual HTTP 404 or 500 responses that resemble network errors', async () => {

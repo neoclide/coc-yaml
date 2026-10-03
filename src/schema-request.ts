@@ -16,7 +16,8 @@ export async function requestSchema(options: XHROptions): Promise<XHRResponse> {
       const delimiter = '. Error: '
       const start = response.responseText.lastIndexOf(delimiter)
       const message = start < 0 ? undefined : response.responseText.slice(start + delimiter.length)
-      if (message === 'socket hang up' || message === 'aborted') {
+      if (message === 'socket hang up' || message === 'aborted'
+        || message === 'Client network socket disconnected before secure TLS connection was established') {
         response.code = 'ECONNRESET'
       } else if (message) {
         // Node's network messages start with an optional syscall and an error
