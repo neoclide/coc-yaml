@@ -121,7 +121,7 @@ class SchemaExtensionAPI implements ExtensionAPI {
           matches.push(uri)
         }
       } catch (error) {
-        logToExtensionOutputChannel(
+        console.error(
           `Error thrown while requesting schema "${error}" when calling the registered contributor "${customKey}"`
         )
       }
